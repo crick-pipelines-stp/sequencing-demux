@@ -70,10 +70,30 @@ include { NANOPLOT } from './modules/nf-core/nanoplot/main'
 */
 
 workflow {
+    //
+    // INIT: 
+    // 
+    ch_versions = Channel.empty{}
 
+
+    // Include fastq data and link it to its metadata in a channel
     ch_fastq = Channel.fromPath("${params.fastq}/*.fastq*")
-    ch_fastq | view
 
-    //nanoplot
+    //
+    // CHANNEL: Adding metadata
+    //
+    ch_fastq = ch_fastq.map {
+        [ [id: it.baseName ], [ it ] ]
+    }
+
+    // ch_fastq | view
+
+    //
+    // MODULE: Run nanoplot
+    //
+    NANOPLOT (
+        ch_fastq
+    )
+    // ch_versions  = ch_versions.mix(NANOPLOT.out.versions)
 
 }
