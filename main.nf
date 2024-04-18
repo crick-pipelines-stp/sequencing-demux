@@ -68,6 +68,7 @@ for (param in check_param_list) { if (param) { file(param, checkIfExists: true) 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+include { DORADO_BASECALLER } from './modules/local/dorado/basecaller/main'
 include { NANOPLOT } from './modules/nf-core/nanoplot/main'
 include { PYCOQC } from './modules/nf-core/pycoqc/main'
 include { MULTIQC } from './modules/nf-core/multiqc/main'
@@ -93,7 +94,23 @@ workflow {
     ch_pod5_files_skipped = Channel.fromPath("${params.run_dir}/pod5_skipped/*.pod5")
     ch_pod5_files = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped)
 
-    ch_pod5_files | view
+    
+
+    // TODO: use run ID as sample name
+    // ch_pod5_files = ch_pod5_files
+    //     .collect()
+    //     .map{
+    //         [[ id: it.baseName ], [ it ] ]
+    //     }
+
+    ch_pod5_files = ch_pod5_files
+        .collect()
+        .map{
+            [[ id: 'RUN' ], it ]
+        }
+
+
+    // ch_pod5_files | view
 
     // Include fastq data and link it to its metadata in a channel
     // ch_fastq = Channel.fromPath("${params.fastq}/*.fastq*")
@@ -102,6 +119,7 @@ workflow {
     //
     // CHANNEL: Adding metadata
     //
+
     // ch_fastq = ch_fastq.map {
     //     [ [id: it.baseName ], [ it ] ]
     // }
@@ -114,7 +132,13 @@ workflow {
 
     //
     // MODULE: Run nanoplot, pycoqc
-    // // 
+    // 
+
+    DORADO_BASECALLER (
+        ch_pod5_files,
+        params.dorado_model
+    )
+
     // NANOPLOT (
     //     ch_fastq
     // )
@@ -124,9 +148,9 @@ workflow {
     // )
 
 
-    // // //
-    // // MODULE: MULTIQC
-    // // //
+    // 
+    // MODULE: MULTIQC
+    // 
 
     // workflow_summary = multiqc_summary(workflow, params)
     // ch_workflow_summary = Channel.value(workflow_summary)
