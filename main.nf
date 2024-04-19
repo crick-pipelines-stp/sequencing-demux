@@ -139,6 +139,11 @@ workflow {
     )
     ch_versions = ch_versions.mix(DORADO_DEMUX.out.versions)
     ch_demux_bam = DORADO_DEMUX.out.bam
+    ch_demux_fastq = DORADO_DEMUX.out.fastq
+
+    // 
+    // MODULE: Generate fastq files
+    // 
 
     // NANOPLOT (
     //     ch_fastq
