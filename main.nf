@@ -132,7 +132,7 @@ workflow {
     }
 
     // 
-    // MODULE: Generate demultiplexed bam files
+    // MODULE: Generate demultiplexed bam or fastq files
     // 
     DORADO_DEMUX (
         ch_bam
@@ -141,13 +141,9 @@ workflow {
     ch_demux_bam = DORADO_DEMUX.out.bam
     ch_demux_fastq = DORADO_DEMUX.out.fastq
 
-    // 
-    // MODULE: Generate fastq files
-    // 
-
-    // NANOPLOT (
-    //     ch_fastq
-    // )
+    NANOPLOT (
+        ch_demux_fastq
+    )
 
     // PYCOQC (
     //     ch_txt

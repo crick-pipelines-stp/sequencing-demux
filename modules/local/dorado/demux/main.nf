@@ -9,7 +9,7 @@ process DORADO_DEMUX {
 
     output:
     tuple val(meta), path("*.bam") , emit: bam , optional: true
-    tuple val(meta), path("*.fastq") , emit: fastq , optional: true
+    tuple val(meta), path("*.fastq.gz") , emit: fastq , optional: true
     path  "versions.yml" , emit: versions
 
     when:
@@ -24,6 +24,10 @@ process DORADO_DEMUX {
         --no-classify \\
         $args \\
         $bam 
+
+    for file in ./*.fastq; do
+        gzip \"\$file\"
+    done
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
