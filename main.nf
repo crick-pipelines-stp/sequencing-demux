@@ -59,7 +59,8 @@ for (param in check_param_list) {
 
 // Check non-manditory input parameters to see if the files exist if they have been specified
 check_param_list = [
-    params.bam
+    params.bam,
+    params.sequencing_summary
 ]
 for (param in check_param_list) { if (param) { file(param, checkIfExists: true) } }
 
@@ -72,7 +73,8 @@ for (param in check_param_list) { if (param) { file(param, checkIfExists: true) 
 
 include { DORADO_BASECALLER } from './modules/local/dorado/basecaller/main'
 include { DORADO_DEMUX } from './modules/local/dorado/demux/main'
-include { NANOPLOT } from './modules/nf-core/nanoplot/main'
+include { NANOPLOT as NANOPLOT_BAM } from './modules/nf-core/nanoplot/main'
+include { NANOPLOT as NANOPLOT_FASTQ } from './modules/nf-core/nanoplot/main'
 include { PYCOQC } from './modules/nf-core/pycoqc/main'
 include { MULTIQC } from './modules/nf-core/multiqc/main'
 
@@ -108,6 +110,18 @@ workflow {
 
     }
 
+    //
+    // CHANNEL: Adding bam files to a channel if it exists
+    //
+    ch_sequencing_summary = Channel.empty()
+    if (params.sequencing_summary) {
+        ch_sequencing_summary = Channel.from(file(params.sequencing_summary, checkIfExists: true))
+            .map{
+                [ [ id: 'RUN'], it ]
+            }
+
+    }
+
     // TODO: use run ID as sample name
 
     //
@@ -119,6 +133,10 @@ workflow {
             [[ id: 'RUN' ], it ]
         }
     
+    // 
+    // CHANNEL: up channel 
+    //
+
     //
     // MODULE: Generate a bam file using the Dorado basecaller unless a bam file was already present as an input
     // 
@@ -141,13 +159,31 @@ workflow {
     ch_demux_bam = DORADO_DEMUX.out.bam
     ch_demux_fastq = DORADO_DEMUX.out.fastq
 
-    NANOPLOT (
-        ch_demux_fastq
-    )
 
-    // PYCOQC (
-    //     ch_txt
+    // 
+    // MODULE: Generate QC plots
+    // 
+    
+    // NANOPLOT_BAM (
+    //     ch_bam
     // )
+
+    if (params.sequencing_summary) {
+        NANOPLOT_FASTQ (
+            ch_sequencing_summary
+        )
+    } else {
+        NANOPLOT_FASTQ (
+            ch_demux_fastq
+        )
+    }
+
+    if (params.sequencing_summary) {
+        PYCOQC (
+           ch_sequencing_summary
+        )
+    }
+    
 
 
     // 
