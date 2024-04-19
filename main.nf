@@ -71,6 +71,7 @@ for (param in check_param_list) { if (param) { file(param, checkIfExists: true) 
 */
 
 include { DORADO_BASECALLER } from './modules/local/dorado/basecaller/main'
+include { DORADO_DEMUX } from './modules/local/dorado/demux/main'
 include { NANOPLOT } from './modules/nf-core/nanoplot/main'
 include { PYCOQC } from './modules/nf-core/pycoqc/main'
 include { MULTIQC } from './modules/nf-core/multiqc/main'
@@ -101,6 +102,10 @@ workflow {
     ch_bam = Channel.empty()
     if (params.bam) {
         ch_bam = Channel.from(file(params.bam, checkIfExists: true))
+            .map{
+                [ [ id: 'RUN'], it ]
+            }
+
     }
 
     // TODO: use run ID as sample name
@@ -126,7 +131,14 @@ workflow {
         ch_bam     = DORADO_BASECALLER.out.bam
     }
 
-    ch_bam | view
+    // 
+    // MODULE: Generate demultiplexed bam files
+    // 
+    DORADO_DEMUX (
+        ch_bam
+    )
+    ch_versions = ch_versions.mix(DORADO_DEMUX.out.versions)
+    ch_demux_bam = DORADO_DEMUX.out.bam
 
     // NANOPLOT (
     //     ch_fastq
