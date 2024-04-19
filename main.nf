@@ -58,7 +58,9 @@ for (param in check_param_list) {
 }
 
 // Check non-manditory input parameters to see if the files exist if they have been specified
-check_param_list = []
+check_param_list = [
+    params.bam
+]
 for (param in check_param_list) { if (param) { file(param, checkIfExists: true) } }
 
 
@@ -83,8 +85,7 @@ workflow {
     //
     // INIT: 
     // 
-    ch_versions = Channel.empty{}
-
+    ch_versions = Channel.empty()
 
     //
     // CHANNEL: Adding all pod5 files
@@ -94,50 +95,38 @@ workflow {
     ch_pod5_files_skipped = Channel.fromPath("${params.run_dir}/pod5_skipped/*.pod5")
     ch_pod5_files = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped)
 
-    
+    //
+    // CHANNEL: Adding bam files to a channel if it exists
+    //
+    ch_bam = Channel.empty()
+    if (params.bam) {
+        ch_bam = Channel.from(file(params.bam, checkIfExists: true))
+    }
 
     // TODO: use run ID as sample name
-    // ch_pod5_files = ch_pod5_files
-    //     .collect()
-    //     .map{
-    //         [[ id: it.baseName ], [ it ] ]
-    //     }
 
+    //
+    // CHANNEL: Put all pod5 generated files and their corresponding sample IDs into a single channel 
+    //
     ch_pod5_files = ch_pod5_files
         .collect()
         .map{
             [[ id: 'RUN' ], it ]
         }
-
-
-    // ch_pod5_files | view
-
-    // Include fastq data and link it to its metadata in a channel
-    // ch_fastq = Channel.fromPath("${params.fastq}/*.fastq*")
-    // ch_txt = Channel.fromPath("${params.txt}/*.txt")
-
+    
     //
-    // CHANNEL: Adding metadata
-    //
-
-    // ch_fastq = ch_fastq.map {
-    //     [ [id: it.baseName ], [ it ] ]
-    // }
-
-    // ch_txt = ch_txt.map {
-    //     [ [id: it.baseName ], [ it ] ]
-    // }
-
-    // ch_txt | view
-
-    //
-    // MODULE: Run nanoplot, pycoqc
+    // MODULE: Generate a bam file using the Dorado basecaller unless a bam file was already present as an input
     // 
+    if (!params.bam) {
+        DORADO_BASECALLER (
+            ch_pod5_files,
+            params.dorado_model
+        )
+        ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
+        ch_bam     = DORADO_BASECALLER.out.bam
+    }
 
-    DORADO_BASECALLER (
-        ch_pod5_files,
-        params.dorado_model
-    )
+    ch_bam | view
 
     // NANOPLOT (
     //     ch_fastq
