@@ -1,6 +1,21 @@
+.DS_Store
+
+.coverage
+.pytest_cache
+*.pyc
+
+# mypy
+.mypy_cache/
+.dmypy.json
+
+# Nextflow
 .nextflow*
 work/
-data/
 results/
-.DS_Store
-*.pycs
+extra_data/
+testing/
+testing*
+
+# nf-test
+.nf-test/
+test.tap
