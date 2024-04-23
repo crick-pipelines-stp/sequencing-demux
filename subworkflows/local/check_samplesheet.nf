@@ -5,8 +5,16 @@ workflow CHECK_SAMPLESHEET {
     samplesheet // file: /path/to/samplesheet.csv
 
     main:
-    SAMPLESHEET_CHECK ( samplesheet )
+    //
+    // MODULE: Run python samplesheet checker
+    //
+    SAMPLESHEET_CHECK ( 
+        samplesheet 
+    )
 
+    //
+    // CHANNEL: Load csv and split columns into metadata
+    //
     meta = SAMPLESHEET_CHECK.out.csv
         .splitCsv ( header:true, sep:"," )
 
