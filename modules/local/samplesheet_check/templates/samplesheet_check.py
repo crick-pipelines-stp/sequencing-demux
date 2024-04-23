@@ -9,8 +9,9 @@ import sys
 # import errno
 import argparse
 # import platform
+import shutil
 
-HEADER = ["sample_id", "project_id", "barcode"]
+HEADER = ["sample_id", "group", "user", "project_id", "barcode"]
 
 
 def check_samplesheet(samplesheet_path, output_path):
@@ -22,9 +23,13 @@ def check_samplesheet(samplesheet_path, output_path):
         # Read header
         header = [x.strip('"') for x in fin.readline().strip().split(",")]
 
+        # Check header length
         if len(HEADER) != len(header):
             print(f"ERROR: Please check samplesheet header -> {','.join(header)} != {','.join(HEADER)}")
             sys.exit(1)
+
+    # Write sample sheet as a valid file
+    shutil.copy(samplesheet_path, output_path)
 
 
 def main(args):
@@ -73,16 +78,6 @@ if __name__ == "__main__":
 #         out_f.write(process_name + ":\n")
 #         out_f.write("    python: " + platform.python_version() + "\n")
 
-
-# def check_samplesheet(process_name, file_in, file_out):
-#     """
-#     This function checks that the samplesheet follows the following structure:
-
-#     group,replicate,fastq_1,fastq_2
-#     WT_PE,1,WT_LIB1_REP1_1.fastq.gz,WT_LIB1_REP1_2.fastq.gz
-#     WT_PE,1,WT_LIB2_REP1_1.fastq.gz,WT_LIB2_REP1_2.fastq.gz
-#     WT_SE,2,WT_LIB1_REP2_1.fastq.gz
-#     """
 #     # Dump version file
 #     dump_versions(process_name)
 
