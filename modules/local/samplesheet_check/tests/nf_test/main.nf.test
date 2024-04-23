@@ -1,0 +1,33 @@
+nextflow_process {
+
+    name "Test Process SAMPLESHEET_CHECK"
+    tag "modules_local"
+    tag "modules"
+    tag "samplesheet"
+    script "../../main.nf"
+    process "SAMPLESHEET_CHECK"
+
+    test("Run single sample") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    file('${moduleTestDir}/../data/single_sample.csv', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        // then {
+        //     assertAll(
+        //         { assert process.success },
+        //         { assert snapshot(
+        //                     process.out.csv,
+        //                     process.out.versions
+        //                  ).match()
+        //         }
+        //     )
+        // }
+    }
+}
