@@ -44,10 +44,13 @@ class TestSampleSheetProcessing(unittest.TestCase):
 
         # Assert
         self.assertTrue(os.path.exists(output_path), "Output file was not created")
+        self.assertTrue(os.path.exists("versions.yml"), "Versions file was not created")
 
         # Teardown
         if os.path.exists(output_path):
             os.remove(output_path)
+        if os.path.exists("versions.yml"):
+            os.remove("versions.yml")
 
     def test_error_too_many_columns(self):
         """
