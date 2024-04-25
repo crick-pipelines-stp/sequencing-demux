@@ -2,7 +2,7 @@ process DORADO_DEMUX {
     tag "$meta.id"
     label 'process_high'
 
-    container 'thecrick/pipetech_dorado:0.6.0-linux-x64'
+    container 'docker.io/thecrick/pipetech_dorado:0.6.0-linux-x64'
 
     input:
     tuple val(meta), path(bam)
