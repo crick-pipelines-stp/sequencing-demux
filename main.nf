@@ -68,13 +68,12 @@ for (param in check_param_list) { if (param) { file(param, checkIfExists: true) 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DORADO_BASECALLER          } from './modules/local/dorado/basecaller/main'
-include { DORADO_DEMUX               } from './modules/local/dorado/demux/main'
-include { CHOPPER                    } from './modules/nf-core/chopper/main'
-include { NANOPLOT as NANOPLOT_BAM   } from './modules/nf-core/nanoplot/main'
-include { NANOPLOT as NANOPLOT_FASTQ } from './modules/nf-core/nanoplot/main'
-include { PYCOQC                     } from './modules/nf-core/pycoqc/main'
-include { MULTIQC                    } from './modules/nf-core/multiqc/main'
+include { DORADO_BASECALLER } from './modules/local/dorado/basecaller/main'
+include { DORADO_DEMUX      } from './modules/local/dorado/demux/main'
+include { CHOPPER           } from './modules/nf-core/chopper/main'
+include { NANOPLOT          } from './modules/nf-core/nanoplot/main'
+include { PYCOQC            } from './modules/nf-core/pycoqc/main'
+include { MULTIQC           } from './modules/nf-core/multiqc/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -192,8 +191,6 @@ workflow {
         .join( ch_demux_bam.map{ [ it[1].simpleName, it ] } )
         .map { [ it[1], it[2][1] ] }
 
-    ch_demux_fastq | view
-
     //
     // MODULE: Run chopper on fastq files
     //
@@ -203,64 +200,46 @@ workflow {
     ch_versions      = ch_versions.mix(CHOPPER.out.versions)
     ch_chopper_fastq = CHOPPER.out.fastq
 
-    // 
-    // MODULE: Generate QC plots
-    // 
-    
-    // NANOPLOT_BAM (
-    //     ch_bam
-    // )
+    //
+    // MODULE: Run Nanoplot
+    //
+    NANOPLOT (
+        ch_sequencing_summary
+    )
+    ch_versions = ch_versions.mix(NANOPLOT.out.versions)
 
-    // if (params.sequencing_summary) {
-    //     NANOPLOT_FASTQ (
-    //         ch_sequencing_summary
-    //     )
-    //     ch_versions = ch_versions.mix(NANOPLOT_FASTQ.out.versions)
-    //     ch_nanoplot     = NANOPLOT_FASTQ.out.png
-    // } else {
-    //     NANOPLOT_FASTQ (
-    //         ch_demux_fastq
-    //     )
-    //     ch_versions = ch_versions.mix(NANOPLOT_FASTQ.out.versions)
-    //     ch_nanoplot     = NANOPLOT_FASTQ.out.png
-    // }
-    
-    // if (params.sequencing_summary) {
-    //     PYCOQC (
-    //        ch_sequencing_summary
-    //     )
-    //     ch_versions = ch_versions.mix(PYCOQC.out.versions)
-    //     ch_pycoqc     = PYCOQC.out.json
-    // }
-    
-    
+    //
+    // MODULE: Run PYCOQC
+    //
+    PYCOQC (
+        ch_sequencing_summary
+    )
+    ch_versions  = ch_versions.mix(PYCOQC.out.versions)
+    ch_pycoqc    = PYCOQC.out.json
 
-
-    // 
+    //
     // MODULE: MULTIQC
-    // 
+    //
 
-    // workflow_summary = multiqc_summary(workflow, params)
-    // ch_workflow_summary = Channel.value(workflow_summary)
+    workflow_summary = multiqc_summary(workflow, params)
+    ch_workflow_summary = Channel.value(workflow_summary)
 
-    // ch_multiqc_files = Channel.empty()
-    // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+    ch_multiqc_files = Channel.empty()
+    ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
     // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_yml.collect())
     // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_unique_yml.collect())
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
     // ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT_FASTQ.out.txt.collect{it[1]}.ifEmpty([]))
 
-    // ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
 
-    // MULTIQC (
-    //     ch_multiqc_files.collect(),
-    //     ch_multiqc_config,
-    //     [],
-    //     []
-    // )
-    // multiqc_report = MULTIQC.out.report.toList()
-
-    // ch_versions  = ch_versions.mix(NANOPLOT.out.versions)
+    MULTIQC (
+        ch_multiqc_files.collect(),
+        ch_multiqc_config,
+        [],
+        []
+    )
+    multiqc_report = MULTIQC.out.report.toList()
 
 }
