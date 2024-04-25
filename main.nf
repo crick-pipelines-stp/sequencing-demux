@@ -10,8 +10,6 @@
 nextflow.enable.dsl = 2
 
 /*
-
-/*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -214,8 +212,8 @@ workflow {
     PYCOQC (
         ch_sequencing_summary
     )
-    ch_versions  = ch_versions.mix(PYCOQC.out.versions)
-    ch_pycoqc    = PYCOQC.out.json
+    ch_versions = ch_versions.mix(PYCOQC.out.versions)
+    ch_pycoqc   = PYCOQC.out.json
 
     //
     // MODULE: MULTIQC
