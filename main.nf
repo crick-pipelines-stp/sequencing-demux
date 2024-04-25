@@ -60,7 +60,8 @@ for (param in check_param_list) {
 // Check non-manditory input parameters to see if the files exist if they have been specified
 check_param_list = [
     params.bam,
-    params.sequencing_summary
+    params.sequencing_summary,
+    params.samplesheet
 ]
 for (param in check_param_list) { if (param) { file(param, checkIfExists: true) } }
 
@@ -71,8 +72,10 @@ for (param in check_param_list) { if (param) { file(param, checkIfExists: true) 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+include { SAMPLESHEET_PARSE } from './subworkflows/local/check_samplesheet'
 include { DORADO_BASECALLER } from './modules/local/dorado/basecaller/main'
 include { DORADO_DEMUX } from './modules/local/dorado/demux/main'
+include { CHOPPER } from './modules/nf-core/chopper/main'
 include { NANOPLOT as NANOPLOT_BAM } from './modules/nf-core/nanoplot/main'
 include { NANOPLOT as NANOPLOT_FASTQ } from './modules/nf-core/nanoplot/main'
 include { PYCOQC } from './modules/nf-core/pycoqc/main'
@@ -107,7 +110,6 @@ workflow {
             .map{
                 [ [ id: 'RUN'], it ]
             }
-
     }
 
     //
@@ -119,10 +121,7 @@ workflow {
             .map{
                 [ [ id: 'RUN'], it ]
             }
-
     }
-
-    // TODO: use run ID as sample name
 
     //
     // CHANNEL: Put all pod5 generated files and their corresponding sample IDs into a single channel 
@@ -132,11 +131,32 @@ workflow {
         .map{
             [[ id: 'RUN' ], it ]
         }
-    
-    // 
-    // CHANNEL: up channel 
-    //
 
+    // 
+    // CHANNEL: extract run ID name
+    //
+    ch_samplesheet = Channel.from(file(params.samplesheet))
+
+    // 
+    // SUBWORKFLOW: check input samplesheet and add relevant info to metadata
+    // 
+    SAMPLESHEET_PARSE (
+        ch_samplesheet
+    )
+    ch_versions = ch_versions.mix(SAMPLESHEET_PARSE.out.versions)
+    ch_meta = SAMPLESHEET_PARSE.out.meta
+
+    //
+    // CHANNEL: extract run ID name and assign to metadata
+    //
+    runid = file(params.run_dir).name
+    ch_meta = ch_meta.map{
+        it.run_id = runid 
+        it.id = it.sample_id
+        it.remove("sample_id")
+        it 
+    }
+    
     //
     // MODULE: Generate a bam file using the Dorado basecaller unless a bam file was already present as an input
     // 
@@ -158,6 +178,44 @@ workflow {
     ch_versions = ch_versions.mix(DORADO_DEMUX.out.versions)
     ch_demux_bam = DORADO_DEMUX.out.bam
     ch_demux_fastq = DORADO_DEMUX.out.fastq
+
+    //
+    // CHANNEL: Merge metadata to the demultiplexed file
+    //
+    ch_demux_fastq = ch_meta
+        .map {
+            [it.barcode, it]
+        }
+        .join(
+            ch_demux_fastq.map{
+                [ it[1].simpleName, it ]
+            }
+        )
+        .map {
+            [ it[1], it[2][1] ]
+        }
+
+    // ch_demux_bam = ch_meta
+    //     .map {
+    //         [it.barcode, it]
+    //     }
+    //     .join(
+    //         ch_demux_bam.map{
+    //             [ it[1].simpleName, it ]
+    //         }
+    //     )
+    //     .map {
+    //         [ it[1], it[2][1] ]
+    //     }
+
+    // 
+    // MODULE: Run chopper on fastq files
+    // // 
+    CHOPPER (
+        ch_demux_fastq
+    )
+    ch_versions = ch_versions.mix(CHOPPER.out.versions)
+    ch_chopper_fastq    = CHOPPER.out.fastq
 
     // 
     // MODULE: Generate QC plots
