@@ -1,6 +1,6 @@
 include { SAMPLESHEET_CHECK } from '../../modules/local/samplesheet_check/main'
 
-workflow CHECK_SAMPLESHEET {
+workflow SAMPLESHEET_PARSE {
     take:
     samplesheet // file: /path/to/samplesheet.csv
 
