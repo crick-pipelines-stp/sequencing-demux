@@ -11,7 +11,6 @@ nextflow.enable.dsl = 2
 
 /*
 
-
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT FUNCTIONS
@@ -20,7 +19,6 @@ nextflow.enable.dsl = 2
 
 include { summary_log     } from './modules/local/util/logging/main'
 include { multiqc_summary } from './modules/local/util/logging/main'
-
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -63,7 +61,6 @@ check_param_list = [
     params.samplesheet
 ]
 for (param in check_param_list) { if (param) { file(param, checkIfExists: true) } }
-
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
