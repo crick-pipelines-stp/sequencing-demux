@@ -5,8 +5,8 @@ Tests for the samplesheet_check module
 import os
 import sys
 from pathlib import Path
-import pytest
 import unittest
+import pytest
 
 
 # Alter python path
