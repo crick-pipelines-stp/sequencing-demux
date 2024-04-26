@@ -135,3 +135,13 @@ class TestSampleSheetProcessing(unittest.TestCase):
 
         with pytest.raises(SystemExit):
             check_samplesheet(samplesheet_path, "samplesheet.checked.csv")
+
+    def test_error_blank_columns(self):
+        """
+        Test case
+        """
+
+        samplesheet_path = os.path.join(script_dir, '..', 'data', 'error', 'blank_columns.csv')
+
+        with pytest.raises(SystemExit):
+            check_samplesheet(samplesheet_path, "samplesheet.checked.csv")
