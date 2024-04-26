@@ -60,6 +60,14 @@ check_param_list = [
 ]
 for (param in check_param_list) { if (param) { file(param, checkIfExists: true) } }
 
+// Select dorado model
+// Dorado models can be selected by auto selection (e.g. hac selects the latest compatible hac model) or by direct model selection.
+// In the case of direct selection, we need to add the container path to the model.
+dorado_model = params.dorado_auto_model
+if(params.dorado_model) {
+    dorado_model = "/home/" + params.dorado_model
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES
@@ -157,7 +165,7 @@ workflow {
     if (!params.bam) {
         DORADO_BASECALLER (
             ch_pod5_files,
-            params.dorado_model
+            dorado_model
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
         ch_bam      = DORADO_BASECALLER.out.bam
