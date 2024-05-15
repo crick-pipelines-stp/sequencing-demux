@@ -233,10 +233,10 @@ workflow {
     //
     // MODULE: Run Nanoplot
     //
-    NANOPLOT (
-        ch_sequencing_summary
-    )
-    ch_versions = ch_versions.mix(NANOPLOT.out.versions)
+    // NANOPLOT (
+    //     ch_sequencing_summary
+    // )
+    // ch_versions = ch_versions.mix(NANOPLOT.out.versions)
     
     // 
     // MODULE: Run PYCOQC
@@ -259,8 +259,9 @@ workflow {
     // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_unique_yml.collect())
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT.out.txt.collect{it[1]}.ifEmpty([]))
+    // ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT.out.txt.collect{it[1]}.ifEmpty([]))
 
+    ch_multiqc_files = ch_multiqc_files.mix(ch_fastqc_html.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
 
     MULTIQC (
