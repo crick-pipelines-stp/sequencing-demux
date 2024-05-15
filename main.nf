@@ -76,7 +76,9 @@ if(params.dorado_model) {
 
 include { DORADO_BASECALLER } from './modules/local/dorado/basecaller/main'
 include { DORADO_DEMUX      } from './modules/local/dorado/demux/main'
+include { SAMTOOLS_VIEW     } from './modules/nf-core/samtools/view/main'
 include { CHOPPER           } from './modules/nf-core/chopper/main'
+include { FASTQC           } from './modules/nf-core/fastqc/main'
 include { NANOPLOT          } from './modules/nf-core/nanoplot/main'
 include { PYCOQC            } from './modules/nf-core/pycoqc/main'
 include { MULTIQC           } from './modules/nf-core/multiqc/main'
@@ -208,6 +210,26 @@ workflow {
     ch_versions      = ch_versions.mix(CHOPPER.out.versions)
     ch_chopper_fastq = CHOPPER.out.fastq
 
+    // 
+    // MODULE: Run fastqc on fastq files
+    //
+    FASTQC (
+        ch_chopper_fastq
+    )
+    ch_versions      = ch_versions.mix(FASTQC.out.versions)
+    ch_fastqc_html = FASTQC.out.html
+
+    // 
+    // MODULE: Filter reads
+    // 
+    SAMTOOLS_VIEW (
+        ch_demux_bam,
+        [],
+        []
+    )
+    ch_versions    = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
+    ch_filtered_reads_bam   = SAMTOOLS_VIEW.out.bam
+
     //
     // MODULE: Run Nanoplot
     //
@@ -237,7 +259,7 @@ workflow {
     // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_unique_yml.collect())
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
-    // ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT_FASTQ.out.txt.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT.out.txt.collect{it[1]}.ifEmpty([]))
 
     ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
 
