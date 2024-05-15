@@ -189,6 +189,8 @@ workflow {
         .join( ch_demux_fastq.map{ [ it[1].simpleName, it ] } )
         .map { [ it[1], it[2][1] ] }
 
+    ch_demux_fastq |view
+
     //
     // CHANNEL: Merge metadata to the demultiplexed file
     //
@@ -197,7 +199,7 @@ workflow {
         .join( ch_demux_bam.map{ [ it[1].simpleName, it ] } )
         .map { [ it[1], it[2][1] ] }
 
-    //
+    // 
     // MODULE: Run chopper on fastq files
     //
     CHOPPER (
@@ -213,8 +215,8 @@ workflow {
         ch_sequencing_summary
     )
     ch_versions = ch_versions.mix(NANOPLOT.out.versions)
-
-    //
+    
+    // 
     // MODULE: Run PYCOQC
     //
     PYCOQC (
@@ -223,10 +225,9 @@ workflow {
     ch_versions = ch_versions.mix(PYCOQC.out.versions)
     ch_pycoqc   = PYCOQC.out.json
 
-    //
+    // 
     // MODULE: MULTIQC
-    //
-
+    // 
     workflow_summary = multiqc_summary(workflow, params)
     ch_workflow_summary = Channel.value(workflow_summary)
 
