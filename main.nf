@@ -74,14 +74,15 @@ if(params.dorado_model) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DORADO_BASECALLER } from './modules/local/dorado/basecaller/main'
-include { DORADO_DEMUX      } from './modules/local/dorado/demux/main'
-include { SAMTOOLS_VIEW     } from './modules/nf-core/samtools/view/main'
-include { CHOPPER           } from './modules/nf-core/chopper/main'
-include { FASTQC           } from './modules/nf-core/fastqc/main'
-include { NANOPLOT          } from './modules/nf-core/nanoplot/main'
-include { PYCOQC            } from './modules/nf-core/pycoqc/main'
-include { MULTIQC           } from './modules/nf-core/multiqc/main'
+include { DORADO_BASECALLER        } from './modules/local/dorado/basecaller/main'
+include { DORADO_DEMUX             } from './modules/local/dorado/demux/main'
+include { SAMTOOLS_VIEW            } from './modules/nf-core/samtools/view/main'
+include { CHOPPER                  } from './modules/nf-core/chopper/main'
+include { FASTQC                   } from './modules/nf-core/fastqc/main'
+include { NANOPLOT                 } from './modules/nf-core/nanoplot/main'
+include { PYCOQC                   } from './modules/nf-core/pycoqc/main'
+include { MULTIQC                  } from './modules/nf-core/multiqc/main'
+include { MULTIQC as MULTIQC_USER  } from './modules/nf-core/multiqc/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,5 +272,17 @@ workflow {
         []
     )
     multiqc_report = MULTIQC.out.report.toList()
+
+
+    ch_multiqc_user_files = Channel.empty() 
+    ch_multiqc_user_files = ch_multiqc_user_files.mix(ch_fastqc_html.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_user_files = ch_multiqc_user_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
+
+    MULTIQC_USER (
+        ch_multiqc_user_files.collect(),
+        ch_multiqc_config,
+        [],
+        []
+    )
 
 }
