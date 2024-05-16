@@ -192,7 +192,7 @@ workflow {
         .join( ch_demux_fastq.map{ [ it[1].simpleName, it ] } )
         .map { [ it[1], it[2][1] ] }
 
-    ch_demux_fastq |view
+    // ch_demux_fastq |view
 
     //
     // CHANNEL: Merge metadata to the demultiplexed file
@@ -218,7 +218,7 @@ workflow {
         ch_chopper_fastq
     )
     ch_versions      = ch_versions.mix(FASTQC.out.versions)
-    ch_fastqc_html = FASTQC.out.html
+    ch_fastqc_zip = FASTQC.out.zip
 
     // 
     // MODULE: Filter reads
@@ -262,9 +262,10 @@ workflow {
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
     // ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT.out.txt.collect{it[1]}.ifEmpty([]))
 
-    ch_multiqc_files = ch_multiqc_files.mix(ch_fastqc_html.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
 
+    // ch_multiqc_files |view
     MULTIQC (
         ch_multiqc_files.collect(),
         ch_multiqc_config,
@@ -274,15 +275,17 @@ workflow {
     multiqc_report = MULTIQC.out.report.toList()
 
 
-    ch_multiqc_user_files = Channel.empty() 
-    ch_multiqc_user_files = ch_multiqc_user_files.mix(ch_fastqc_html.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_user_files = ch_multiqc_user_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
+    // ch_multiqc_user_files = Channel.empty()
+    // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+    // ch_multiqc_user_files = ch_multiqc_user_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
+    // // ch_multiqc_user_files = ch_multiqc_user_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
+    // // ch_multiqc_user_files | view
 
-    MULTIQC_USER (
-        ch_multiqc_user_files.collect(),
-        ch_multiqc_config,
-        [],
-        []
-    )
-
+    // MULTIQC_USER (
+    //     ch_multiqc_user_files.collect(),
+    //     ch_multiqc_config,
+    //     [],
+    //     []
+    // )
+    // multiqc_user_report = MULTIQC_USER.out.report.toList()
 }

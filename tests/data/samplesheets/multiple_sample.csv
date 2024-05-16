@@ -1,0 +1,3 @@
+sample_id,group,user,project_id,barcode
+test_sample_a413,asf,john.smith,DN45678,unclassified
+test_sample_a123,asf,alice.smith,RN45678,unclassified
