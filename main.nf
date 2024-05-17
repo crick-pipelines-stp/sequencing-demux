@@ -74,19 +74,20 @@ if(params.dorado_model) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DORADO_BASECALLER        } from './modules/local/dorado/basecaller/main'
-include { DORADO_DEMUX             } from './modules/local/dorado/demux/main'
-include { SAMTOOLS_VIEW            } from './modules/nf-core/samtools/view/main'
-include { CHOPPER                  } from './modules/nf-core/chopper/main'
-include { SEQKIT_SEQ } from './modules/nf-core/seqkit/seq/main' 
+include { DORADO_BASECALLER                } from './modules/local/dorado/basecaller/main'
+include { DORADO_DEMUX                     } from './modules/local/dorado/demux/main'
+include { SAMTOOLS_VIEW                    } from './modules/nf-core/samtools/view/main'
+include { CHOPPER                          } from './modules/nf-core/chopper/main'
+include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main' 
 include { LINUX_COMMAND as FILTER_QC_FASTQ } from './modules/local/linux/command'
-include { CAT_CAT as CAT_READ_IDS } from './modules/nf-core/cat/cat/main'  
-
-include { FASTQC                   } from './modules/nf-core/fastqc/main'
-include { NANOPLOT                 } from './modules/nf-core/nanoplot/main'
-include { PYCOQC                   } from './modules/nf-core/pycoqc/main'
-include { MULTIQC                  } from './modules/nf-core/multiqc/main'
-include { MULTIQC as MULTIQC_USER  } from './modules/nf-core/multiqc/main'
+include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'  
+include { FASTQC                           } from './modules/nf-core/fastqc/main'
+include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/main'
+include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
+include { PYCOQC as PYCOQC_ALL             } from './modules/nf-core/pycoqc/main'
+include { PYCOQC as PYCOQC_GROUPED         } from './modules/nf-core/pycoqc/main'
+include { MULTIQC as MULTIQC_ALL           } from './modules/nf-core/multiqc/main'
+include { MULTIQC as MULTIQC_GROUPED       } from './modules/nf-core/multiqc/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,25 +208,28 @@ workflow {
     }
 
     if (params.run_filtering) {
-        //
-        // MODULE: Filter on read quality for fastq files
-        //
-        CHOPPER (
-            ch_demux_fastq
-        )
-        ch_versions    = ch_versions.mix(CHOPPER.out.versions)
-        ch_demux_fastq = CHOPPER.out.fastq
-
-        //
-        // MODULE: Filter on read quality for bam files
-        //
-        SAMTOOLS_VIEW (
-            ch_demux_bam,
-            [],
-            []
-        )
-        ch_versions  = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
-        ch_demux_bam = SAMTOOLS_VIEW.out.bam
+        if(!params.emit_bam) {
+            //
+            // MODULE: Filter on read quality for fastq files
+            //
+            CHOPPER (
+                ch_demux_fastq
+            )
+            ch_versions    = ch_versions.mix(CHOPPER.out.versions)
+            ch_demux_fastq = CHOPPER.out.fastq
+        }
+        else {
+            //
+            // MODULE: Filter on read quality for bam files
+            //
+            SAMTOOLS_VIEW (
+                ch_demux_bam,
+                [],
+                []
+            )
+            ch_versions  = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
+            ch_demux_bam = SAMTOOLS_VIEW.out.bam
+        }
     }
 
     if(params.run_qc) {
@@ -240,14 +244,14 @@ workflow {
         ch_read_ids = SEQKIT_SEQ.out.fastx
 
         //
-        // CHANNEL: Group reads by group,user,project
+        // CHANNEL: Group read ids by run_id,group,user,project
         //
         ch_grouped_read_ids = ch_read_ids
-            .map{ [ it[0].group, it[0].user, it[0].project_id, it ] }
-            .groupTuple(by: [0, 1, 2])
+            .map{ [ it[0].run_id, it[0].group, it[0].user, it[0].project_id, it ] }
+            .groupTuple(by: [0, 1, 2, 3])
             .map {
-                def files = it[3].flatten().findAll { item -> !(item instanceof Map) }
-                [ [ id:it[0]+"_"+it[1]+"_"+it[2], group: it[0], user:it[1], project_id:it[2]], files ]
+                def files = it[4].flatten().findAll { item -> !(item instanceof Map) }
+                [ [ id:it[1]+"_"+it[2]+"_"+it[3], run_id:it[0], group: it[1], user:it[2], project_id:it[3]], files ]
             }
 
         //
@@ -266,26 +270,45 @@ workflow {
             ch_grouped_read_ids,
             ch_sequencing_summary.collect()
         )
-        ch_sequencing_summary_user = FILTER_QC_FASTQ.out.file.map{ [ it[0], it[1][1] ] }
+        ch_sequencing_summary_grouped = FILTER_QC_FASTQ.out.file.map{ [ it[0], it[1][1] ] }
 
+        if(!params.emit_bam) {
+            //
+            // MODULE: Run fastqc on all fastq files if they exist
+            //
+            FASTQC (
+                ch_demux_fastq
+            )
+            ch_versions   = ch_versions.mix(FASTQC.out.versions)
+            ch_fastqc_zip = FASTQC.out.zip
 
-        ch_sequencing_summary_user | view
-        //
-        // MODULE: Run fastqc on fastq files
-        //
-        // FASTQC (
-        //     ch_chopper_fastq
-        // )
-        // ch_versions      = ch_versions.mix(FASTQC.out.versions)
-        // ch_fastqc_zip = FASTQC.out.zip
+            //
+            // CHANNEL: Group fastqc by run_id,group,user,project
+            //
+            ch_grouped_fastqc = ch_fastqc_zip
+                .map{ [ it[0].run_id, it[0].group, it[0].user, it[0].project_id, it ] }
+                .groupTuple(by: [0, 1, 2, 3])
+                .map {
+                    def files = it[4].flatten().findAll { item -> !(item instanceof Map) }
+                    [ [ id:it[1]+"_"+it[2]+"_"+it[3], run_id:it[0], group: it[1], user:it[2], project_id:it[3]], files ]
+                }
+        }
 
         //
-        // MODULE: Run Nanoplot
+        // MODULE: Run Nanoplot on all samples
         //
-        // NANOPLOT (
-        //     ch_sequencing_summary
-        // )
-        // ch_versions = ch_versions.mix(NANOPLOT.out.versions)
+        NANOPLOT_ALL (
+            ch_sequencing_summary
+        )
+        ch_versions = ch_versions.mix(NANOPLOT_ALL.out.versions)
+
+        //
+        // MODULE: Run Nanoplot on grouped samples
+        //
+        NANOPLOT_GROUPED (
+            ch_sequencing_summary_grouped
+        )
+        ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
         
         // 
         // MODULE: Run PYCOQC
