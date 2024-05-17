@@ -1,0 +1,7 @@
+sample_id,group,user,project_id,barcode
+sample01,asf,john.smith,DN23241,barcode01
+sample02,asf,john.smith,DN23241,barcode02
+sample03,asf,john.smith,DN23241,barcode03
+sample04,asf,john.smith,DN23241,barcode04
+sample05,asf,john.smith,DN23241,barcode05
+sample06,asf,john.smith,DN23241,barcode06
