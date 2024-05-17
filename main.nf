@@ -309,15 +309,22 @@ workflow {
             ch_sequencing_summary_grouped
         )
         ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
-        
-        // 
-        // MODULE: Run PYCOQC
+
         //
-        // PYCOQC (
-        //     ch_sequencing_summary
-        // )
-        // ch_versions = ch_versions.mix(PYCOQC.out.versions)
-        // ch_pycoqc   = PYCOQC.out.json
+        // MODULE: Run pycoqc on all samples
+        //
+        PYCOQC_ALL (
+            ch_sequencing_summary
+        )
+        ch_versions = ch_versions.mix(PYCOQC_ALL.out.versions)
+
+        //
+        // MODULE: Run pycoqc on grouped samples
+        //
+        PYCOQC_GROUPED (
+            ch_sequencing_summary_grouped
+        )
+        ch_versions = ch_versions.mix(PYCOQC_GROUPED.out.versions)
 
         // 
         // MODULE: MULTIQC
