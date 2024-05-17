@@ -78,6 +78,10 @@ include { DORADO_BASECALLER        } from './modules/local/dorado/basecaller/mai
 include { DORADO_DEMUX             } from './modules/local/dorado/demux/main'
 include { SAMTOOLS_VIEW            } from './modules/nf-core/samtools/view/main'
 include { CHOPPER                  } from './modules/nf-core/chopper/main'
+include { SEQKIT_SEQ } from './modules/nf-core/seqkit/seq/main' 
+include { LINUX_COMMAND as FILTER_QC_FASTQ } from './modules/local/linux/command'
+include { CAT_CAT as CAT_READ_IDS } from './modules/nf-core/cat/cat/main'  
+
 include { FASTQC                   } from './modules/nf-core/fastqc/main'
 include { NANOPLOT                 } from './modules/nf-core/nanoplot/main'
 include { PYCOQC                   } from './modules/nf-core/pycoqc/main'
@@ -204,35 +208,77 @@ workflow {
 
     if (params.run_filtering) {
         //
-        // MODULE: Run chopper on fastq files
+        // MODULE: Filter on read quality for fastq files
         //
         CHOPPER (
             ch_demux_fastq
         )
-        ch_versions      = ch_versions.mix(CHOPPER.out.versions)
-        ch_chopper_fastq = CHOPPER.out.fastq
+        ch_versions    = ch_versions.mix(CHOPPER.out.versions)
+        ch_demux_fastq = CHOPPER.out.fastq
 
         //
-        // MODULE: Filter reads
+        // MODULE: Filter on read quality for bam files
         //
         SAMTOOLS_VIEW (
             ch_demux_bam,
             [],
             []
         )
-        ch_versions    = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
-        ch_filtered_reads_bam   = SAMTOOLS_VIEW.out.bam
+        ch_versions  = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
+        ch_demux_bam = SAMTOOLS_VIEW.out.bam
     }
 
     if(params.run_qc) {
+
+        //
+        // MODULE: Extract read ids from fastq file
+        //
+        SEQKIT_SEQ (
+            ch_demux_fastq
+        )
+        ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
+        ch_read_ids = SEQKIT_SEQ.out.fastx
+
+        //
+        // CHANNEL: Group reads by group,user,project
+        //
+        ch_grouped_read_ids = ch_read_ids
+            .map{ [ it[0].group, it[0].user, it[0].project_id, it ] }
+            .groupTuple(by: [0, 1, 2])
+            .map {
+                def files = it[3].flatten().findAll { item -> !(item instanceof Map) }
+                [ [ id:it[0]+"_"+it[1]+"_"+it[2], group: it[0], user:it[1], project_id:it[2]], files ]
+            }
+
+        //
+        // MODULE: Merge read ids from the same group
+        //
+        CAT_READ_IDS (
+            ch_grouped_read_ids
+        )
+        ch_versions         = ch_versions.mix(CAT_READ_IDS.out.versions)
+        ch_grouped_read_ids = CAT_READ_IDS.out.file_out
+
+        //
+        // MODULE: Filter sequencing summary file based on reads from groups
+        //
+        FILTER_QC_FASTQ (
+            ch_grouped_read_ids,
+            ch_sequencing_summary.collect()
+        )
+        ch_sequencing_summary_user = FILTER_QC_FASTQ.out.file.map{ [ it[0], it[1][1] ] }
+
+
+        ch_sequencing_summary_user | view
         //
         // MODULE: Run fastqc on fastq files
         //
-        FASTQC (
-            ch_chopper_fastq
-        )
-        ch_versions      = ch_versions.mix(FASTQC.out.versions)
-        ch_fastqc_zip = FASTQC.out.zip
+        // FASTQC (
+        //     ch_chopper_fastq
+        // )
+        // ch_versions      = ch_versions.mix(FASTQC.out.versions)
+        // ch_fastqc_zip = FASTQC.out.zip
+
         //
         // MODULE: Run Nanoplot
         //
@@ -244,37 +290,37 @@ workflow {
         // 
         // MODULE: Run PYCOQC
         //
-        PYCOQC (
-            ch_sequencing_summary
-        )
-        ch_versions = ch_versions.mix(PYCOQC.out.versions)
-        ch_pycoqc   = PYCOQC.out.json
+        // PYCOQC (
+        //     ch_sequencing_summary
+        // )
+        // ch_versions = ch_versions.mix(PYCOQC.out.versions)
+        // ch_pycoqc   = PYCOQC.out.json
 
         // 
         // MODULE: MULTIQC
         // 
-        workflow_summary = multiqc_summary(workflow, params)
-        ch_workflow_summary = Channel.value(workflow_summary)
+        // workflow_summary = multiqc_summary(workflow, params)
+        // ch_workflow_summary = Channel.value(workflow_summary)
 
-        ch_multiqc_files = Channel.empty()
-        ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+        // ch_multiqc_files = Channel.empty()
+        // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
         // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_yml.collect())
         // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_unique_yml.collect())
 
         // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
         // ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT.out.txt.collect{it[1]}.ifEmpty([]))
 
-        ch_multiqc_files = ch_multiqc_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-        ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
+        // ch_multiqc_files = ch_multiqc_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
+        // ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
 
         // ch_multiqc_files |view
-        MULTIQC (
-            ch_multiqc_files.collect(),
-            ch_multiqc_config,
-            [],
-            []
-        )
-        multiqc_report = MULTIQC.out.report.toList()
+        // MULTIQC (
+        //     ch_multiqc_files.collect(),
+        //     ch_multiqc_config,
+        //     [],
+        //     []
+        // )
+        // multiqc_report = MULTIQC.out.report.toList()
 
 
         // ch_multiqc_user_files = Channel.empty()
