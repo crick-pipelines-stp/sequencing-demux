@@ -186,20 +186,20 @@ workflow {
         ch_demux_fastq = DORADO_DEMUX.out.fastq
 
         //
-        // CHANNEL: Merge metadata to the demultiplexed file
+        // CHANNEL: Merge metadata to the demultiplexed fastq file
         //
         ch_demux_fastq = ch_meta
             .map { [it.barcode, it] }
-            .join( ch_demux_fastq.map{ [ it[1].simpleName, it ] } )
-            .map { [ it[1], it[2][1] ] }
+            .join( ch_demux_fastq.map{it[1]}.flatten().map{ [ it.simpleName, it ] } )
+            .map { [ it[1], it[2] ] }
 
         //
-        // CHANNEL: Merge metadata to the demultiplexed file
+        // CHANNEL: Merge metadata to the demultiplexed bam file
         //
         ch_demux_bam = ch_meta
             .map { [it.barcode, it] }
-            .join( ch_demux_bam.map{ [ it[1].simpleName, it ] } )
-            .map { [ it[1], it[2][1] ] }
+            .join( ch_demux_bam.map{it[1]}.flatten().map{ [ it.simpleName, it ] } )
+            .map { [ it[1], it[2] ] }
     }
 
     if (params.run_filtering) {
