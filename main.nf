@@ -161,11 +161,11 @@ workflow {
         it.remove("sample_id")
         it 
     }
-    
-    //
-    // MODULE: Generate a bam file using the Dorado basecaller unless a bam file was already present as an input
-    // 
-    if (!params.bam) {
+
+    if (params.run_basecaller && !params.bam) {
+        //
+        // MODULE: Generate a bam file using the Dorado basecaller unless a bam file was already present as an input
+        //
         DORADO_BASECALLER (
             ch_pod5_files,
             dorado_model
@@ -174,118 +174,121 @@ workflow {
         ch_bam      = DORADO_BASECALLER.out.bam
     }
 
-    // 
-    // MODULE: Generate demultiplexed bam or fastq files
-    // 
-    DORADO_DEMUX (
-        ch_bam
-    )
-    ch_versions    = ch_versions.mix(DORADO_DEMUX.out.versions)
-    ch_demux_bam   = DORADO_DEMUX.out.bam
-    ch_demux_fastq = DORADO_DEMUX.out.fastq
+    if (params.run_demux) {
+        //
+        // MODULE: Generate demultiplexed bam or fastq files
+        //
+        DORADO_DEMUX (
+            ch_bam
+        )
+        ch_versions    = ch_versions.mix(DORADO_DEMUX.out.versions)
+        ch_demux_bam   = DORADO_DEMUX.out.bam
+        ch_demux_fastq = DORADO_DEMUX.out.fastq
 
-    //
-    // CHANNEL: Merge metadata to the demultiplexed file
-    //
-    ch_demux_fastq = ch_meta
-        .map { [it.barcode, it] }
-        .join( ch_demux_fastq.map{ [ it[1].simpleName, it ] } )
-        .map { [ it[1], it[2][1] ] }
+        //
+        // CHANNEL: Merge metadata to the demultiplexed file
+        //
+        ch_demux_fastq = ch_meta
+            .map { [it.barcode, it] }
+            .join( ch_demux_fastq.map{ [ it[1].simpleName, it ] } )
+            .map { [ it[1], it[2][1] ] }
 
-    // ch_demux_fastq |view
+        //
+        // CHANNEL: Merge metadata to the demultiplexed file
+        //
+        ch_demux_bam = ch_meta
+            .map { [it.barcode, it] }
+            .join( ch_demux_bam.map{ [ it[1].simpleName, it ] } )
+            .map { [ it[1], it[2][1] ] }
+    }
 
-    //
-    // CHANNEL: Merge metadata to the demultiplexed file
-    //
-    ch_demux_bam = ch_meta
-        .map { [it.barcode, it] }
-        .join( ch_demux_bam.map{ [ it[1].simpleName, it ] } )
-        .map { [ it[1], it[2][1] ] }
+    if (params.run_filtering) {
+        //
+        // MODULE: Run chopper on fastq files
+        //
+        CHOPPER (
+            ch_demux_fastq
+        )
+        ch_versions      = ch_versions.mix(CHOPPER.out.versions)
+        ch_chopper_fastq = CHOPPER.out.fastq
 
-    // 
-    // MODULE: Run chopper on fastq files
-    //
-    CHOPPER (
-        ch_demux_fastq
-    )
-    ch_versions      = ch_versions.mix(CHOPPER.out.versions)
-    ch_chopper_fastq = CHOPPER.out.fastq
+        //
+        // MODULE: Filter reads
+        //
+        SAMTOOLS_VIEW (
+            ch_demux_bam,
+            [],
+            []
+        )
+        ch_versions    = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
+        ch_filtered_reads_bam   = SAMTOOLS_VIEW.out.bam
+    }
 
-    // 
-    // MODULE: Run fastqc on fastq files
-    //
-    FASTQC (
-        ch_chopper_fastq
-    )
-    ch_versions      = ch_versions.mix(FASTQC.out.versions)
-    ch_fastqc_zip = FASTQC.out.zip
+    if(params.run_qc) {
+        //
+        // MODULE: Run fastqc on fastq files
+        //
+        FASTQC (
+            ch_chopper_fastq
+        )
+        ch_versions      = ch_versions.mix(FASTQC.out.versions)
+        ch_fastqc_zip = FASTQC.out.zip
+        //
+        // MODULE: Run Nanoplot
+        //
+        // NANOPLOT (
+        //     ch_sequencing_summary
+        // )
+        // ch_versions = ch_versions.mix(NANOPLOT.out.versions)
+        
+        // 
+        // MODULE: Run PYCOQC
+        //
+        PYCOQC (
+            ch_sequencing_summary
+        )
+        ch_versions = ch_versions.mix(PYCOQC.out.versions)
+        ch_pycoqc   = PYCOQC.out.json
 
-    // 
-    // MODULE: Filter reads
-    // 
-    SAMTOOLS_VIEW (
-        ch_demux_bam,
-        [],
-        []
-    )
-    ch_versions    = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
-    ch_filtered_reads_bam   = SAMTOOLS_VIEW.out.bam
+        // 
+        // MODULE: MULTIQC
+        // 
+        workflow_summary = multiqc_summary(workflow, params)
+        ch_workflow_summary = Channel.value(workflow_summary)
 
-    //
-    // MODULE: Run Nanoplot
-    //
-    // NANOPLOT (
-    //     ch_sequencing_summary
-    // )
-    // ch_versions = ch_versions.mix(NANOPLOT.out.versions)
-    
-    // 
-    // MODULE: Run PYCOQC
-    //
-    PYCOQC (
-        ch_sequencing_summary
-    )
-    ch_versions = ch_versions.mix(PYCOQC.out.versions)
-    ch_pycoqc   = PYCOQC.out.json
+        ch_multiqc_files = Channel.empty()
+        ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+        // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_yml.collect())
+        // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_unique_yml.collect())
 
-    // 
-    // MODULE: MULTIQC
-    // 
-    workflow_summary = multiqc_summary(workflow, params)
-    ch_workflow_summary = Channel.value(workflow_summary)
+        // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
+        // ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT.out.txt.collect{it[1]}.ifEmpty([]))
 
-    ch_multiqc_files = Channel.empty()
-    ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-    // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_yml.collect())
-    // ch_multiqc_files = ch_multiqc_files.mix(DUMP_SOFTWARE_VERSIONS.out.mqc_unique_yml.collect())
+        ch_multiqc_files = ch_multiqc_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
+        ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
 
-    // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
-    // ch_multiqc_files = ch_multiqc_files.mix(NANOPLOT.out.txt.collect{it[1]}.ifEmpty([]))
-
-    ch_multiqc_files = ch_multiqc_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files = ch_multiqc_files.mix(ch_pycoqc.collect{it[1]}.ifEmpty([]))
-
-    // ch_multiqc_files |view
-    MULTIQC (
-        ch_multiqc_files.collect(),
-        ch_multiqc_config,
-        [],
-        []
-    )
-    multiqc_report = MULTIQC.out.report.toList()
+        // ch_multiqc_files |view
+        MULTIQC (
+            ch_multiqc_files.collect(),
+            ch_multiqc_config,
+            [],
+            []
+        )
+        multiqc_report = MULTIQC.out.report.toList()
 
 
-    // ch_multiqc_user_files = Channel.empty()
-    // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-    // ch_multiqc_user_files = ch_multiqc_user_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-    // // ch_multiqc_user_files = ch_multiqc_user_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
-    // // ch_multiqc_user_files | view
+        // ch_multiqc_user_files = Channel.empty()
+        // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+        // ch_multiqc_user_files = ch_multiqc_user_files.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
+        // // ch_multiqc_user_files = ch_multiqc_user_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
+        // // ch_multiqc_user_files | view
 
-    // MULTIQC_USER (
-    //     ch_multiqc_user_files.collect(),
-    //     ch_multiqc_config,
-    //     [],
-    //     []
-    // )
-    // multiqc_user_report = MULTIQC_USER.out.report.toList()
+        // MULTIQC_USER (
+        //     ch_multiqc_user_files.collect(),
+        //     ch_multiqc_config,
+        //     [],
+        //     []
+        // )
+        // multiqc_user_report = MULTIQC_USER.out.report.toList()
+    }
 }
