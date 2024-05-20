@@ -1,5 +1,5 @@
 process PYCOQC {
-    tag "$summary"
+    tag "$meta.id"
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
