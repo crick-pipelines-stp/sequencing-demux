@@ -42,7 +42,7 @@ log.info summary_log(workflow, params, params.debug, params.monochrome_logs)
 
 // Check manditory input parameters to see if the files exist if they have been specified
 check_param_list = [
-    run_dir: params.run_dir
+    run_dir: params.run_dir,
     sample_sheet: params.samplesheet
 ]
 for (param in check_param_list) {
