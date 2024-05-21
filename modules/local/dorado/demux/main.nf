@@ -8,9 +8,9 @@ process DORADO_DEMUX {
     tuple val(meta), path(bam)
 
     output:
-    tuple val(meta), path("*.bam") , emit: bam , optional: true
+    tuple val(meta), path("*.bam")      , emit: bam , optional: true
     tuple val(meta), path("*.fastq.gz") , emit: fastq , optional: true
-    path  "versions.yml" , emit: versions
+    path  "versions.yml"                , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -23,11 +23,13 @@ process DORADO_DEMUX {
         --output-dir ./ \\
         --no-classify \\
         $args \\
-        $bam 
+        $bam
 
-    for file in ./*.fastq; do
-        gzip \"\$file\"
-    done
+    if ls ./*.fastq 1> /dev/null 2>&1; then
+        for file in ./*.fastq; do
+            gzip \"\$file\"
+        done
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
