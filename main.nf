@@ -221,7 +221,7 @@ workflow {
             //
             SAMTOOLS_VIEW (
                 ch_demux_bam,
-                [],
+                [[], []],
                 []
             )
             ch_versions  = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
