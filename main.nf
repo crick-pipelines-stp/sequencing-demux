@@ -83,9 +83,10 @@ include { DORADO_BASECALLER                } from './modules/local/dorado/baseca
 include { DORADO_DEMUX                     } from './modules/local/dorado/demux/main'
 include { SAMTOOLS_VIEW                    } from './modules/nf-core/samtools/view/main'
 include { CHOPPER                          } from './modules/nf-core/chopper/main'
-include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main' 
-include { LINUX_COMMAND as FILTER_QC_FASTQ } from './modules/local/linux/command'
-include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'  
+include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main'
+include { SAMTOOLS_CUSTOM_VIEW             } from './modules/local/samtools/custom_view/main'
+include { LINUX_COMMAND as FILTER_QC       } from './modules/local/linux/command'
+include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'
 include { FASTQC                           } from './modules/nf-core/fastqc/main'
 include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/main'
 include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
@@ -243,14 +244,26 @@ workflow {
 
     if(params.run_qc) {
 
-        //
-        // MODULE: Extract read ids from fastq file
-        //
-        SEQKIT_SEQ (
-            ch_demux_fastq
-        )
-        ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
-        ch_read_ids = SEQKIT_SEQ.out.fastx
+        if(params.emit_bam) {
+            //
+            // MODULE: Extract read ids from bam file
+            //
+            SAMTOOLS_CUSTOM_VIEW (
+                ch_demux_bam.map{[it[0], it[1], []]}
+            )
+            ch_versions = ch_versions.mix(SAMTOOLS_CUSTOM_VIEW.out.versions)
+            ch_read_ids = SAMTOOLS_CUSTOM_VIEW.out.file
+        }
+        else {
+            //
+            // MODULE: Extract read ids from fastq file
+            //
+            SEQKIT_SEQ (
+                ch_demux_fastq
+            )
+            ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
+            ch_read_ids = SEQKIT_SEQ.out.fastx
+        }
 
         //
         // CHANNEL: Group read ids by run_id,group,user,project
@@ -275,11 +288,11 @@ workflow {
         //
         // MODULE: Filter sequencing summary file based on reads from groups
         //
-        FILTER_QC_FASTQ (
+        FILTER_QC (
             ch_grouped_read_ids,
             ch_sequencing_summary.collect()
         )
-        ch_sequencing_summary_grouped = FILTER_QC_FASTQ.out.file.map{ [ it[0], it[1][1] ] }
+        ch_sequencing_summary_grouped = FILTER_QC.out.file.map{ [ it[0], it[1][1] ] }
 
         ch_fastqc_zip     = Channel.empty()
         ch_grouped_fastqc = Channel.empty()
