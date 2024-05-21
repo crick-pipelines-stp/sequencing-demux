@@ -7,6 +7,7 @@ process DORADO_BASECALLER {
     input:
     tuple val(meta), path("pod5s/*")
     val(model)
+    val(bc_kit)
 
     output:
     tuple val(meta), path("*.bam") , emit: bam
@@ -17,9 +18,9 @@ process DORADO_BASECALLER {
     task.ext.when == null || task.ext.when
 
     script:
-    def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-    def bc_kit = task.ext.bc_kit ? "--kit-name ${task.ext.bc_kit}"  : ''
+    def args       = task.ext.args ?: ''
+    def prefix     = task.ext.prefix ?: "${meta.id}"
+    def bc_kit_arg = bc_kit ? "--kit-name ${bc_kit}"  : ''
 
     """
     dorado basecaller \\
@@ -36,7 +37,3 @@ process DORADO_BASECALLER {
     END_VERSIONS
     """
 }
-
-
-
-// --device cuda:all

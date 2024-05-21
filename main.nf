@@ -68,6 +68,11 @@ if(params.dorado_model) {
     dorado_model = "/home/" + params.dorado_model
 }
 
+// Check bc-kit
+if(params.dorado_bc_kit && !(params.dorado_bc_kit in params.bc_kits)) {
+    exit 1, "Invalid barcode kit specified: ${params.dorado_bc_kit}"
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES
@@ -174,7 +179,8 @@ workflow {
         //
         DORADO_BASECALLER (
             ch_pod5_files,
-            dorado_model
+            dorado_model,
+            params.dorado_bc_kit
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
         ch_bam      = DORADO_BASECALLER.out.bam
@@ -305,20 +311,28 @@ workflow {
         ch_versions = ch_versions.mix(NANOPLOT_ALL.out.versions)
 
         //
-        // MODULE: Run Nanoplot on grouped samples
-        //
-        NANOPLOT_GROUPED (
-            ch_sequencing_summary_grouped
-        )
-        ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
-
-        //
         // MODULE: Run pycoqc on all samples
         //
         PYCOQC_ALL (
             ch_sequencing_summary
         )
         ch_versions = ch_versions.mix(PYCOQC_ALL.out.versions)
+
+        //
+        // CHANNEL: Filter out all summarys with nothing in them
+        //
+        ch_sequencing_summary_grouped = ch_sequencing_summary_grouped
+            .filter { row ->
+                file(row[1]).size() >= 500
+            }
+
+        //
+        // MODULE: Run Nanoplot on grouped samples
+        //
+        NANOPLOT_GROUPED (
+            ch_sequencing_summary_grouped
+        )
+        ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
 
         //
         // MODULE: Run pycoqc on grouped samples
