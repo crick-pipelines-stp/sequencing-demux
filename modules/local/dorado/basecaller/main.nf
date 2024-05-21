@@ -26,7 +26,7 @@ process DORADO_BASECALLER {
     dorado basecaller \\
         $model \\
         pod5s/ \\
-        $bc_kit \\
+        $bc_kit_arg \\
         $args \\
         > ${prefix}.bam
 
