@@ -280,6 +280,8 @@ workflow {
         )
         ch_sequencing_summary_grouped = FILTER_QC_FASTQ.out.file.map{ [ it[0], it[1][1] ] }
 
+        ch_fastqc_zip     = Channel.empty()
+        ch_grouped_fastqc = Channel.empty()
         if(!params.emit_bam) {
             //
             // MODULE: Run fastqc on all fastq files if they exist
