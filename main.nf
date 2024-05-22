@@ -182,7 +182,7 @@ workflow {
         DORADO_BASECALLER (
             ch_pod5_files,
             dorado_model,
-            params.dorado_bc_kit
+            params.dorado_bc_kit ?: []
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
         ch_bam      = DORADO_BASECALLER.out.bam
