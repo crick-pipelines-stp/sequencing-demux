@@ -15,8 +15,11 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { summary_log     } from './modules/local/util/logging/main'
-include { multiqc_summary } from './modules/local/util/logging/main'
+include { params_summary_map } from './modules/local/util/logging/main'
+include { summary_log        } from './modules/local/util/logging/main'
+include { multiqc_summary    } from './modules/local/util/logging/main'
+include { dump_parameters    } from './modules/local/util/logging/main'
+include { im_notification    } from './modules/local/util/logging/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,6 +36,7 @@ ch_multiqc_config = file("$projectDir/assets/multiqc_config.yml", checkIfExists:
 */
 
 log.info summary_log(workflow, params, params.debug, params.monochrome_logs)
+def summary_params = params_summary_map(workflow, params, params.debug)
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,6 +76,9 @@ if(params.dorado_model) {
 if(params.dorado_bc_kit && !(params.dorado_bc_kit in params.bc_kits)) {
     exit 1, "Invalid barcode kit specified: ${params.dorado_bc_kit}"
 }
+
+// Extract run_id
+def runid = file(params.run_dir).name
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -167,7 +174,6 @@ workflow {
     //
     // CHANNEL: extract run ID name and assign to metadata
     //
-    runid = file(params.run_dir).name
     ch_meta = ch_meta.map{
         it.run_id = runid 
         it.id = it.sample_id
@@ -408,3 +414,27 @@ workflow {
         multiqc_report_grouped = MULTIQC_GROUPED.out.report.toList()
     }
 }
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    COMPLETION EMAIL AND SUMMARY
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+workflow.onComplete {
+    dump_parameters(workflow, params)
+
+    if (params.hook_url) {
+        im_notification(workflow, params, projectDir, runid, summary_params, log)
+    }
+
+    // if (params.email || params.email_on_fail) {
+    //     NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report, pass_mapped_reads, pass_trimmed_reads, pass_strand_check)
+    // }
+}
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    THE END
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
