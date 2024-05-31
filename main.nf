@@ -15,8 +15,11 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { summary_log     } from './modules/local/util/logging/main'
-include { multiqc_summary } from './modules/local/util/logging/main'
+include { params_summary_map } from './modules/local/util/logging/main'
+include { summary_log        } from './modules/local/util/logging/main'
+include { multiqc_summary    } from './modules/local/util/logging/main'
+include { dump_parameters    } from './modules/local/util/logging/main'
+include { im_notification    } from './modules/local/util/logging/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,6 +36,7 @@ ch_multiqc_config = file("$projectDir/assets/multiqc_config.yml", checkIfExists:
 */
 
 log.info summary_log(workflow, params, params.debug, params.monochrome_logs)
+def summary_params = params_summary_map(workflow, params, params.debug)
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,7 +46,8 @@ log.info summary_log(workflow, params, params.debug, params.monochrome_logs)
 
 // Check manditory input parameters to see if the files exist if they have been specified
 check_param_list = [
-    run_dir: params.run_dir
+    run_dir: params.run_dir,
+    sample_sheet: params.samplesheet
 ]
 for (param in check_param_list) {
     if (!param.value) {
@@ -55,8 +60,7 @@ for (param in check_param_list) {
 
 // Check non-manditory input parameters to see if the files exist if they have been specified
 check_param_list = [
-    params.bam,
-    params.samplesheet
+    params.bam
 ]
 for (param in check_param_list) { if (param) { file(param, checkIfExists: true) } }
 
@@ -68,6 +72,14 @@ if(params.dorado_model) {
     dorado_model = "/home/" + params.dorado_model
 }
 
+// Check bc-kit
+if(params.dorado_bc_kit && !(params.dorado_bc_kit in params.bc_kits)) {
+    exit 1, "Invalid barcode kit specified: ${params.dorado_bc_kit}"
+}
+
+// Extract run_id
+def runid = file(params.run_dir).name
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES
@@ -78,9 +90,10 @@ include { DORADO_BASECALLER                } from './modules/local/dorado/baseca
 include { DORADO_DEMUX                     } from './modules/local/dorado/demux/main'
 include { SAMTOOLS_VIEW                    } from './modules/nf-core/samtools/view/main'
 include { CHOPPER                          } from './modules/nf-core/chopper/main'
-include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main' 
-include { LINUX_COMMAND as FILTER_QC_FASTQ } from './modules/local/linux/command'
-include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'  
+include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main'
+include { SAMTOOLS_CUSTOM_VIEW             } from './modules/local/samtools/custom_view/main'
+include { LINUX_COMMAND as FILTER_QC       } from './modules/local/linux/command'
+include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'
 include { FASTQC                           } from './modules/nf-core/fastqc/main'
 include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/main'
 include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
@@ -114,10 +127,11 @@ workflow {
     //
     // CHANNEL: Adding all pod5 files
     //
+    ch_pod5_files         = Channel.fromPath("${params.run_dir}/pod5/*.pod5")
     ch_pod5_files_pass    = Channel.fromPath("${params.run_dir}/pod5_pass/*.pod5")
     ch_pod5_files_fail    = Channel.fromPath("${params.run_dir}/pod5_fail/*.pod5")
     ch_pod5_files_skipped = Channel.fromPath("${params.run_dir}/pod5_skipped/*.pod5")
-    ch_pod5_files = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped)
+    ch_pod5_files         = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped).mix(ch_pod5_files)
 
     //
     // CHANNEL: Put all pod5 generated files and their corresponding sample IDs into a single channel 
@@ -160,7 +174,6 @@ workflow {
     //
     // CHANNEL: extract run ID name and assign to metadata
     //
-    runid = file(params.run_dir).name
     ch_meta = ch_meta.map{
         it.run_id = runid 
         it.id = it.sample_id
@@ -174,7 +187,8 @@ workflow {
         //
         DORADO_BASECALLER (
             ch_pod5_files,
-            dorado_model
+            dorado_model,
+            params.dorado_bc_kit ?: []
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
         ch_bam      = DORADO_BASECALLER.out.bam
@@ -215,7 +229,7 @@ workflow {
             //
             SAMTOOLS_VIEW (
                 ch_demux_bam,
-                [],
+                [[], []],
                 []
             )
             ch_versions  = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
@@ -236,14 +250,26 @@ workflow {
 
     if(params.run_qc) {
 
-        //
-        // MODULE: Extract read ids from fastq file
-        //
-        SEQKIT_SEQ (
-            ch_demux_fastq
-        )
-        ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
-        ch_read_ids = SEQKIT_SEQ.out.fastx
+        if(params.emit_bam) {
+            //
+            // MODULE: Extract read ids from bam file
+            //
+            SAMTOOLS_CUSTOM_VIEW (
+                ch_demux_bam.map{[it[0], it[1], []]}
+            )
+            ch_versions = ch_versions.mix(SAMTOOLS_CUSTOM_VIEW.out.versions)
+            ch_read_ids = SAMTOOLS_CUSTOM_VIEW.out.file
+        }
+        else {
+            //
+            // MODULE: Extract read ids from fastq file
+            //
+            SEQKIT_SEQ (
+                ch_demux_fastq
+            )
+            ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
+            ch_read_ids = SEQKIT_SEQ.out.fastx
+        }
 
         //
         // CHANNEL: Group read ids by run_id,group,user,project
@@ -268,12 +294,14 @@ workflow {
         //
         // MODULE: Filter sequencing summary file based on reads from groups
         //
-        FILTER_QC_FASTQ (
+        FILTER_QC (
             ch_grouped_read_ids,
             ch_sequencing_summary.collect()
         )
-        ch_sequencing_summary_grouped = FILTER_QC_FASTQ.out.file.map{ [ it[0], it[1][1] ] }
+        ch_sequencing_summary_grouped = FILTER_QC.out.file.map{ [ it[0], it[1][1] ] }
 
+        ch_fastqc_zip     = Channel.empty()
+        ch_grouped_fastqc = Channel.empty()
         if(!params.emit_bam) {
             //
             // MODULE: Run fastqc on all fastq files if they exist
@@ -305,20 +333,28 @@ workflow {
         ch_versions = ch_versions.mix(NANOPLOT_ALL.out.versions)
 
         //
-        // MODULE: Run Nanoplot on grouped samples
-        //
-        NANOPLOT_GROUPED (
-            ch_sequencing_summary_grouped
-        )
-        ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
-
-        //
         // MODULE: Run pycoqc on all samples
         //
         PYCOQC_ALL (
             ch_sequencing_summary
         )
         ch_versions = ch_versions.mix(PYCOQC_ALL.out.versions)
+
+        //
+        // CHANNEL: Filter out all summarys with nothing in them
+        //
+        ch_sequencing_summary_grouped = ch_sequencing_summary_grouped
+            .filter { row ->
+                file(row[1]).size() >= 500
+            }
+
+        //
+        // MODULE: Run Nanoplot on grouped samples
+        //
+        NANOPLOT_GROUPED (
+            ch_sequencing_summary_grouped
+        )
+        ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
 
         //
         // MODULE: Run pycoqc on grouped samples
@@ -378,3 +414,27 @@ workflow {
         multiqc_report_grouped = MULTIQC_GROUPED.out.report.toList()
     }
 }
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    COMPLETION EMAIL AND SUMMARY
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+workflow.onComplete {
+    dump_parameters(workflow, params)
+
+    if (params.hook_url) {
+        im_notification(workflow, params, projectDir, runid, summary_params, log)
+    }
+
+    // if (params.email || params.email_on_fail) {
+    //     NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report, pass_mapped_reads, pass_trimmed_reads, pass_strand_check)
+    // }
+}
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    THE END
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
