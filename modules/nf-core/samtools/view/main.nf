@@ -8,7 +8,7 @@ process SAMTOOLS_VIEW {
         'biocontainers/samtools:1.19.2--h50ea8bc_0' }"
 
     input:
-    tuple val(meta), path(input), path(index)
+    tuple val(meta), path(input)
     tuple val(meta2), path(fasta)
     path qname
 
@@ -45,27 +45,6 @@ process SAMTOOLS_VIEW {
         -o ${prefix}.${file_type} \\
         $input \\
         $args2
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
-    END_VERSIONS
-    """
-
-    stub:
-    def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-    def file_type = args.contains("--output-fmt sam") ? "sam" :
-                    args.contains("--output-fmt bam") ? "bam" :
-                    args.contains("--output-fmt cram") ? "cram" :
-                    input.getExtension()
-    if ("$input" == "${prefix}.${file_type}") error "Input and output names are the same, use \"task.ext.prefix\" to disambiguate!"
-
-    def index = args.contains("--write-index") ? "touch ${prefix}.csi" : ""
-
-    """
-    touch ${prefix}.${file_type}
-    ${index}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
