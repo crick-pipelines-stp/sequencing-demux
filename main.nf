@@ -99,6 +99,8 @@ include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/ma
 include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
 include { PYCOQC as PYCOQC_ALL             } from './modules/nf-core/pycoqc/main'
 include { PYCOQC as PYCOQC_GROUPED         } from './modules/nf-core/pycoqc/main'
+include { TOULLIGQC as TOULLIGQC_ALL       } from './modules/local/toulligqc/main'
+include { TOULLIGQC as TOULLIGQC_GROUPED   } from './modules/local/toulligqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS      } from './modules/local/custom_dumpsoftwareversions'
 include { MULTIQC as MULTIQC_ALL           } from './modules/local/multiqc/main'
 include { MULTIQC as MULTIQC_GROUPED       } from './modules/local/multiqc/main'
@@ -300,6 +302,14 @@ workflow {
         )
         ch_sequencing_summary_grouped = FILTER_QC.out.file.map{ [ it[0], it[1][1] ] }
 
+        //
+        // CHANNEL: Filter out all summarys with nothing in them
+        //
+        ch_sequencing_summary_grouped = ch_sequencing_summary_grouped
+            .filter { row ->
+                file(row[1]).size() >= 500
+            }
+
         ch_fastqc_zip     = Channel.empty()
         ch_grouped_fastqc = Channel.empty()
         if(!params.emit_bam) {
@@ -341,12 +351,12 @@ workflow {
         ch_versions = ch_versions.mix(PYCOQC_ALL.out.versions)
 
         //
-        // CHANNEL: Filter out all summarys with nothing in them
+        // MODULE: Run toulligqc on all samples
         //
-        ch_sequencing_summary_grouped = ch_sequencing_summary_grouped
-            .filter { row ->
-                file(row[1]).size() >= 500
-            }
+        TOULLIGQC_ALL (
+            ch_bam
+        )
+        ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
 
         //
         // MODULE: Run Nanoplot on grouped samples
@@ -363,6 +373,23 @@ workflow {
             ch_sequencing_summary_grouped
         )
         ch_versions = ch_versions.mix(PYCOQC_GROUPED.out.versions)
+
+        //
+        // CHANNEL: Select correct data
+        //
+        if(params.emit_bam) {
+            ch_toulligqc_seq = ch_demux_bam
+        } else {
+            ch_toulligqc_seq = ch_demux_fastq
+        }
+
+        //
+        // MODULE: Run toulligqc on single seq files
+        //
+        TOULLIGQC_GROUPED (
+            ch_toulligqc_seq
+        )
+        ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
 
         //
         // MODULE: Collect software versions
