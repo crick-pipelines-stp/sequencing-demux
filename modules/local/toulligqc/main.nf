@@ -1,5 +1,6 @@
 process TOULLIGQC {
-    label 'process_low'
+    label 'process_single'
+    label 'process_med_memory'
     tag "$meta.id"
 
     container "docker.io/genomicpariscentre/toulligqc:2.7"
