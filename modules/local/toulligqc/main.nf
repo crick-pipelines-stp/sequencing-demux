@@ -6,7 +6,7 @@ process TOULLIGQC {
 
     input:
     tuple val(meta), path(ontfile)
-    path(pod5, stageAs: "pod5/*")
+    path(pod5, stageAs: "source_pod5/*")
 
     output:
     tuple val(meta), path("*/*.data")              , emit: report_data
@@ -25,7 +25,7 @@ process TOULLIGQC {
     def input_file = ("$ontfile".endsWith(".fastq") || "$ontfile".endsWith(".fastq.gz") || "$ontfile".endsWith(".fq") || "$ontfile".endsWith(".fq.gz")) ? "--fastq ${ontfile}" :
         ("$ontfile".endsWith(".txt") || "$ontfile".endsWith(".txt.gz")) ? "--sequencing-summary-source ${ontfile}" :
         ("$ontfile".endsWith(".bam")) ? "--bam ${ontfile}" : ''
-    def pod5_arg = pod5 ? "--pod5-source pod5/" : ''
+    def pod5_arg = pod5 ? "--pod5-source source_pod5/" : ''
 
     """
     toulligqc \\
