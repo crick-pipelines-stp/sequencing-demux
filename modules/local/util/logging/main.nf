@@ -322,6 +322,31 @@ def dump_parameters(workflow, params) {
     temp_pf.delete()
 }
 
+
+//
+// Dump channel meta into CSV
+//
+def dump_meta(meta, path) {
+    // print(meta)
+    // print(path)
+
+    def csvFile = new File(path)
+    csvFile.withWriter { writer ->
+        def headers = meta[0].keySet()
+        writer.writeLine(headers.join(','))
+
+    meta.each { map ->
+        def row = headers.collect { map[it] }
+        writer.writeLine(row.join(','))
+    }
+}
+
+    // def temp_pf = new File(workflow.launchDir.toString(), ".${filename}")
+    // FilesEx.copyTo(temp_pf.toPath(), "${params.outdir}/pipeline_info/params_${timestamp}.json")
+    // temp_pf.delete()
+}
+
+
 //
 // Construct and send a notification to a web server as JSON
 // e.g. Microsoft Teams and Slack

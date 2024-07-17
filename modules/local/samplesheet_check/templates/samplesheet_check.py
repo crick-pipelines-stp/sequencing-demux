@@ -9,7 +9,7 @@ import argparse
 import platform
 import shutil
 
-HEADER = ["sample_id", "group", "user", "project_id", "barcode"]
+HEADER = ["sample_id", "sample_name", "group", "user", "project_id", "barcode"]
 
 
 def check_samplesheet(samplesheet_path, output_path):
