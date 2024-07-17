@@ -327,10 +327,8 @@ def dump_parameters(workflow, params) {
 // Dump channel meta into CSV
 //
 def dump_meta(meta, path) {
-    // print(meta)
-    // print(path)
-
     def csvFile = new File(path)
+    csvFile.parentFile.mkdirs()
     csvFile.withWriter { writer ->
         def headers = meta[0].keySet()
         writer.writeLine(headers.join(','))
