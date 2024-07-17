@@ -250,9 +250,8 @@ workflow {
             CHOPPER (
                 ch_demux_fastq
             )
-            ch_versions    = ch_versions.mix(CHOPPER.out.versions)
-            ch_demux_fastq = CHOPPER.out.fastq
-
+            ch_versions             = ch_versions.mix(CHOPPER.out.versions)
+            ch_demux_filtered_fastq = CHOPPER.out.fastq
         }
     }
 
