@@ -3,8 +3,10 @@ process NANOPLOT {
     label 'process_low'
 
     conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/nanoplot:1.41.6--pyhdfd78af_0' :
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ? 
+        'https://depot.galaxyproject.org/singularity/nanoplot:1.41.6--pyhdfd78af_0' : 
+         workflow.profile.contains('arm') ? 
+        'community.wave.seqera.io/library/nanoplot:1.42.0--580643f59ed80f4f' : 
         'biocontainers/nanoplot:1.41.6--pyhdfd78af_0' }"
 
     input:

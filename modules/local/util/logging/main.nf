@@ -1,3 +1,10 @@
+import org.yaml.snakeyaml.Yaml
+import groovy.json.JsonOutput
+import nextflow.extension.FilesEx
+import java.nio.file.Path
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 //
 // ANSII Colours used for terminal logging
 //
@@ -280,4 +287,157 @@ def multiqc_summary(workflow, params) {
     yaml_file_text        += "data: |\n"
     yaml_file_text        += "${summary_section}"
     return yaml_file_text
+}
+
+//
+// Generate version string
+//
+def String version(workflow) {
+    String version_string = ""
+
+    if (workflow.manifest.version) {
+        def prefix_v = workflow.manifest.version[0] != 'v' ? 'v' : ''
+        version_string += "${prefix_v}${workflow.manifest.version}"
+    }
+
+    if (workflow.commitId) {
+        def git_shortsha = workflow.commitId.substring(0, 7)
+        version_string += "-g${git_shortsha}"
+    }
+
+    return version_string
+}
+
+//
+// Dump pipeline parameters in a json file
+//
+def dump_parameters(workflow, params) {
+    def timestamp  = new java.util.Date().format( 'yyyy-MM-dd_HH-mm-ss')
+    def filename   = "params_${timestamp}.json"
+    def temp_pf    = new File(workflow.launchDir.toString(), ".${filename}")
+    def jsonStr    = JsonOutput.toJson(params)
+    temp_pf.text   = JsonOutput.prettyPrint(jsonStr)
+
+    FilesEx.copyTo(temp_pf.toPath(), "${params.outdir}/pipeline_info/params_${timestamp}.json")
+    temp_pf.delete()
+}
+
+
+//
+// Dump channel meta into CSV
+//
+def dump_meta(meta, path) {
+    def csvFile = new File(path)
+    csvFile.parentFile.mkdirs()
+    csvFile.withWriter { writer ->
+        def headers = meta[0].keySet()
+        writer.writeLine(headers.join(','))
+
+    meta.each { map ->
+        def row = headers.collect { map[it] }
+        writer.writeLine(row.join(','))
+    }
+}
+
+    // def temp_pf = new File(workflow.launchDir.toString(), ".${filename}")
+    // FilesEx.copyTo(temp_pf.toPath(), "${params.outdir}/pipeline_info/params_${timestamp}.json")
+    // temp_pf.delete()
+}
+
+
+//
+// Construct and send a notification to a web server as JSON
+// e.g. Microsoft Teams and Slack
+//
+def im_notification(workflow, params, projectDir, runid, summary_params, log) {
+    
+    // Init
+    def hook_url = params.hook_url
+
+    // Flatten the summary into one keyvalue list
+    def summary = [:]
+    for (group in summary_params.keySet()) {
+        summary << summary_params[group]
+    }
+
+    // filter summary for ignored params
+    def params_ignore = params.ignore_params.split(',')
+    def filtered_summary = summary.findAll { k, v -> !params_ignore.contains(k) }
+
+    // Build misc fields
+    def misc_fields = [:]
+    misc_fields['start']                               = workflow.start
+    misc_fields['complete']                            = workflow.complete
+    misc_fields['scriptfile']                          = workflow.scriptFile
+    misc_fields['scriptid']                            = workflow.scriptId
+    if (workflow.repository) misc_fields['repository'] = workflow.repository
+    if (workflow.commitId)   misc_fields['commitid']   = workflow.commitId
+    if (workflow.revision)   misc_fields['revision']   = workflow.revision
+    misc_fields['nxf_version']                         = workflow.nextflow.version
+    misc_fields['nxf_build']                           = workflow.nextflow.build
+    misc_fields['nxf_timestamp']                       = workflow.nextflow.timestamp
+
+    // Set all null values to empty strings
+    summary = filtered_summary << misc_fields
+    summary.each { k, v ->
+        if (v == null) {
+            summary[k] = ""
+        }
+    }
+
+    // Create formatted summary
+    def formatted_summary = summary.collect { k, v ->
+        k == 'hook_url' ? "_${k}_: (_hidden_)" :
+        (v instanceof Path || (v instanceof String && v.contains('/'))) ? "_${k}_: `${v}`" :
+        v instanceof LocalDateTime ? "_${k}_: ${v.format(DateTimeFormatter.ofLocalizedDateTime(DateTimeFormatter.MEDIUM))}" :
+        "_${k}_: ${v}"
+    }.join(',\n')
+
+    // Santitise error message
+    error_message = 'None'
+    if(workflow.errorReport) {
+        error_message = workflow.errorMessage.replaceAll(/"/, '\\"')       // Escape double quotes
+                                            //  .replaceAll(/'/, "\\'")       // Escape single quotes
+                                            //  .replaceAll(/[^\x20-\x7E]+/, "") // Remove non-printable characters
+                                            //  .replaceAll(/[\n]+/, "\\\\n")  // Replace newlines with \\n
+    }
+
+    // Build msg fields
+    def msg_fields = [:]
+    msg_fields['version']          = version(workflow)
+    msg_fields['runName']          = workflow.runName
+    msg_fields['success']          = workflow.success
+    msg_fields['dateComplete']     = workflow.complete
+    msg_fields['duration']         = workflow.duration
+    msg_fields['exitStatus']       = workflow.exitStatus
+    msg_fields['errorMessage']     = (workflow.errorMessage ?: 'None')
+    msg_fields['errorReport']      = error_message
+    msg_fields['commandLine']      = workflow.commandLine.replaceFirst(/ +--hook_url +[^ ]+/, "")
+    msg_fields['projectDir']       = workflow.projectDir
+    msg_fields['formattedSummary'] = formatted_summary
+    msg_fields['runId']            = runid
+
+    // Render the JSON template
+    def engine        = new groovy.text.GStringTemplateEngine()
+    def json_path     = "slackreport.json"
+    def hf            = new File("$projectDir/assets/${json_path}")
+    def json_template = engine.createTemplate(hf).make(msg_fields)
+    def json_message  = json_template.toString()
+
+    // Debug, export the json message to file
+    def temp_pf    = new File(workflow.launchDir.toString(), ".slack.json")
+    temp_pf.text   = JsonOutput.prettyPrint(json_message)
+    FilesEx.copyTo(temp_pf.toPath(), "${params.outdir}/slack_message.json")
+    temp_pf.delete()
+
+    // POST
+    def post = new URL(hook_url).openConnection();
+    post.setRequestMethod("POST")
+    post.setDoOutput(true)
+    post.setRequestProperty("Content-Type", "application/json")
+    post.getOutputStream().write(json_message.getBytes("UTF-8"));
+    def postRC = post.getResponseCode();
+    if (! postRC.equals(200)) {
+        log.warn(post.getErrorStream().getText());
+    }
 }

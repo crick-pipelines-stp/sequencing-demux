@@ -1,8 +1,8 @@
-# report_section_order:
-#   software_versions:
-#     order: -1000
-#   "cas9point4-summary":
-#     order: -1001
+report_section_order:
+  software_versions:
+    order: -1000
+  "pipelines-technology-nanopore_demux-summary":
+    order: -1001
 
 export_plots: true
 
@@ -11,7 +11,10 @@ run_modules:
   - custom_content
   - fastqc
   - pycoqc
+  - nanostat
 
 module_order:
   - fastqc
   - pycoqc
+  - nanostat
+  - custom_content
