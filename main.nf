@@ -1,4 +1,5 @@
 #!/usr/bin/env nextflow
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     pipelines-technology/nanopore_demux
@@ -20,6 +21,7 @@ include { summary_log        } from './modules/local/util/logging/main'
 include { multiqc_summary    } from './modules/local/util/logging/main'
 include { dump_parameters    } from './modules/local/util/logging/main'
 include { im_notification    } from './modules/local/util/logging/main'
+include { dump_meta          } from './modules/local/util/logging/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,17 +90,22 @@ def runid = file(params.run_dir).name
 
 include { DORADO_BASECALLER                } from './modules/local/dorado/basecaller/main'
 include { DORADO_DEMUX                     } from './modules/local/dorado/demux/main'
-include { SAMTOOLS_VIEW                    } from './modules/nf-core/samtools/view/main'
+include { SAMTOOLS_VIEW as FILTER_READ_Q   } from './modules/nf-core/samtools/view/main'
 include { CHOPPER                          } from './modules/nf-core/chopper/main'
-include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main'
-include { SAMTOOLS_CUSTOM_VIEW             } from './modules/local/samtools/custom_view/main'
-include { LINUX_COMMAND as FILTER_QC       } from './modules/local/linux/command'
-include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'
+// include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main'
+// include { SAMTOOLS_CUSTOM_VIEW             } from './modules/local/samtools/custom_view/main'
+// include { LINUX_COMMAND as FILTER_QC       } from './modules/local/linux/command'
+// include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'
 include { FASTQC                           } from './modules/nf-core/fastqc/main'
-include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/main'
-include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
-include { PYCOQC as PYCOQC_ALL             } from './modules/nf-core/pycoqc/main'
-include { PYCOQC as PYCOQC_GROUPED         } from './modules/nf-core/pycoqc/main'
+// include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/main'
+// include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
+// include { PYCOQC as PYCOQC_ALL             } from './modules/nf-core/pycoqc/main'
+// include { PYCOQC as PYCOQC_GROUPED         } from './modules/nf-core/pycoqc/main'
+include { SAMTOOLS_VIEW as FILTER_BC       } from './modules/nf-core/samtools/view/main'
+include { SAMTOOLS_MERGE                   } from './modules/nf-core/samtools/merge/main'
+include { DORADO_SUMMARY                   } from './modules/local/dorado/summary/main'
+include { TOULLIGQC as TOULLIGQC_ALL       } from './modules/local/toulligqc/main'
+include { TOULLIGQC as TOULLIGQC_GROUPED   } from './modules/local/toulligqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS      } from './modules/local/custom_dumpsoftwareversions'
 include { MULTIQC as MULTIQC_ALL           } from './modules/local/multiqc/main'
 include { MULTIQC as MULTIQC_GROUPED       } from './modules/local/multiqc/main'
@@ -132,6 +139,7 @@ workflow {
     ch_pod5_files_fail    = Channel.fromPath("${params.run_dir}/pod5_fail/*.pod5")
     ch_pod5_files_skipped = Channel.fromPath("${params.run_dir}/pod5_skipped/*.pod5")
     ch_pod5_files         = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped).mix(ch_pod5_files)
+    ch_collected_pod5     = ch_pod5_files.collect().ifEmpty([])
 
     //
     // CHANNEL: Put all pod5 generated files and their corresponding sample IDs into a single channel 
@@ -227,13 +235,13 @@ workflow {
             //
             // MODULE: Filter on read quality for bam files
             //
-            SAMTOOLS_VIEW (
+            FILTER_READ_Q (
                 ch_demux_bam,
                 [[], []],
                 []
             )
-            ch_versions  = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
-            ch_demux_bam = SAMTOOLS_VIEW.out.bam
+            ch_versions  = ch_versions.mix(FILTER_READ_Q.out.versions)
+            ch_demux_bam = FILTER_READ_Q.out.bam
         }
         else {
             //
@@ -242,63 +250,86 @@ workflow {
             CHOPPER (
                 ch_demux_fastq
             )
-            ch_versions    = ch_versions.mix(CHOPPER.out.versions)
-            ch_demux_fastq = CHOPPER.out.fastq
-
+            ch_versions             = ch_versions.mix(CHOPPER.out.versions)
+            ch_demux_filtered_fastq = CHOPPER.out.fastq
         }
     }
 
     if(params.run_qc) {
 
-        if(params.emit_bam) {
-            //
-            // MODULE: Extract read ids from bam file
-            //
-            SAMTOOLS_CUSTOM_VIEW (
-                ch_demux_bam.map{[it[0], it[1], []]}
-            )
-            ch_versions = ch_versions.mix(SAMTOOLS_CUSTOM_VIEW.out.versions)
-            ch_read_ids = SAMTOOLS_CUSTOM_VIEW.out.file
-        }
-        else {
-            //
-            // MODULE: Extract read ids from fastq file
-            //
-            SEQKIT_SEQ (
-                ch_demux_fastq
-            )
-            ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
-            ch_read_ids = SEQKIT_SEQ.out.fastx
-        }
+        // if(params.emit_bam) {
+        //     //
+        //     // MODULE: Extract read ids from bam file
+        //     //
+        //     SAMTOOLS_CUSTOM_VIEW (
+        //         ch_demux_bam.map{[it[0], it[1], []]}
+        //     )
+        //     ch_versions = ch_versions.mix(SAMTOOLS_CUSTOM_VIEW.out.versions)
+        //     ch_read_ids = SAMTOOLS_CUSTOM_VIEW.out.file
+        // }
+        // else {
+        //     //
+        //     // MODULE: Extract read ids from fastq file
+        //     //
+        //     SEQKIT_SEQ (
+        //         ch_demux_fastq
+        //     )
+        //     ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
+        //     ch_read_ids = SEQKIT_SEQ.out.fastx
+        // }
 
         //
         // CHANNEL: Group read ids by run_id,group,user,project
         //
-        ch_grouped_read_ids = ch_read_ids
-            .map{ [ it[0].run_id, it[0].group, it[0].user, it[0].project_id, it ] }
-            .groupTuple(by: [0, 1, 2, 3])
-            .map {
-                def files = it[4].flatten().findAll { item -> !(item instanceof Map) }
-                [ [ id:it[1]+"_"+it[2]+"_"+it[3], run_id:it[0], group: it[1], user:it[2], project_id:it[3]], files ]
-            }
+        // ch_grouped_read_ids = ch_read_ids
+        //     .map{ [ it[0].run_id, it[0].group, it[0].user, it[0].project_id, it ] }
+        //     .groupTuple(by: [0, 1, 2, 3])
+        //     .map {
+        //         def files = it[4].flatten().findAll { item -> !(item instanceof Map) }
+        //         [ [ id:it[1]+"_"+it[2]+"_"+it[3], run_id:it[0], group: it[1], user:it[2], project_id:it[3]], files ]
+        //     }
 
         //
         // MODULE: Merge read ids from the same group
         //
-        CAT_READ_IDS (
-            ch_grouped_read_ids
-        )
-        ch_versions         = ch_versions.mix(CAT_READ_IDS.out.versions)
-        ch_grouped_read_ids = CAT_READ_IDS.out.file_out
+        // CAT_READ_IDS (
+        //     ch_grouped_read_ids
+        // )
+        // ch_versions         = ch_versions.mix(CAT_READ_IDS.out.versions)
+        // ch_grouped_read_ids = CAT_READ_IDS.out.file_out
 
         //
         // MODULE: Filter sequencing summary file based on reads from groups
         //
-        FILTER_QC (
-            ch_grouped_read_ids,
-            ch_sequencing_summary.collect()
-        )
-        ch_sequencing_summary_grouped = FILTER_QC.out.file.map{ [ it[0], it[1][1] ] }
+        // FILTER_QC (
+        //     ch_grouped_read_ids,
+        //     ch_sequencing_summary.collect()
+        // )
+        // ch_sequencing_summary_grouped = FILTER_QC.out.file.map{ [ it[0], it[1][1] ] }
+
+        //
+        // CHANNEL: Filter out all summarys with nothing in them
+        //
+        // ch_sequencing_summary_grouped = ch_sequencing_summary_grouped
+        //     .filter { row ->
+        //         file(row[1]).size() >= 500
+        //     }
+
+        //
+        // MODULE: Run Nanoplot on all samples
+        //
+        // NANOPLOT_ALL (
+        //     ch_sequencing_summary
+        // )
+        // ch_versions = ch_versions.mix(NANOPLOT_ALL.out.versions)
+
+        //
+        // MODULE: Run pycoqc on all samples
+        //
+        // PYCOQC_ALL (
+        //     ch_sequencing_summary
+        // )
+        // ch_versions = ch_versions.mix(PYCOQC_ALL.out.versions)
 
         ch_fastqc_zip     = Channel.empty()
         ch_grouped_fastqc = Channel.empty()
@@ -325,44 +356,125 @@ workflow {
         }
 
         //
-        // MODULE: Run Nanoplot on all samples
-        //
-        NANOPLOT_ALL (
-            ch_sequencing_summary
-        )
-        ch_versions = ch_versions.mix(NANOPLOT_ALL.out.versions)
-
-        //
-        // MODULE: Run pycoqc on all samples
-        //
-        PYCOQC_ALL (
-            ch_sequencing_summary
-        )
-        ch_versions = ch_versions.mix(PYCOQC_ALL.out.versions)
-
-        //
-        // CHANNEL: Filter out all summarys with nothing in them
-        //
-        ch_sequencing_summary_grouped = ch_sequencing_summary_grouped
-            .filter { row ->
-                file(row[1]).size() >= 500
-            }
-
-        //
         // MODULE: Run Nanoplot on grouped samples
         //
-        NANOPLOT_GROUPED (
-            ch_sequencing_summary_grouped
-        )
-        ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
+        // NANOPLOT_GROUPED (
+        //     ch_sequencing_summary_grouped
+        // )
+        // ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
 
         //
         // MODULE: Run pycoqc on grouped samples
         //
-        PYCOQC_GROUPED (
-            ch_sequencing_summary_grouped
+        // PYCOQC_GROUPED (
+        //     ch_sequencing_summary_grouped
+        // )
+        // ch_versions = ch_versions.mix(PYCOQC_GROUPED.out.versions)
+
+        //
+        // MODULE: Run toulligqc on all samples
+        //
+        TOULLIGQC_ALL (
+            ch_bam,
+            ch_collected_pod5
         )
-        ch_versions = ch_versions.mix(PYCOQC_GROUPED.out.versions)
+        ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
+
+        //
+        // CHANNEL: Select seq data
+        //
+        if(params.emit_bam) {
+            ch_seq = ch_demux_bam
+        } else {
+            ch_seq = ch_demux_fastq
+        }
+
+        //
+        // CHANNEL: Extract metadata and bind to single bam file, split out barcodes from unclassified
+        //
+        ch_meta_bam = ch_seq
+            .map { it[0] }
+            .combine(ch_bam)
+            .map { [ it[0], it[2] ] }
+            .branch {
+                bc: it[0].barcode != 'unclassified'
+                uc: it[0].barcode == 'unclassified'
+            }
+
+        FILTER_BC (
+            ch_meta_bam.bc,
+            [[], []],
+            []
+        )
+        ch_versions = ch_versions.mix(FILTER_BC.out.versions)
+        ch_filt_bam = FILTER_BC.out.bam
+        ch_filt_bam = ch_filt_bam.mix(ch_meta_bam.uc)
+
+        //
+        // CHANNEL: Group bam by run_id,group,user,project
+        //
+        ch_grouped_bam = ch_filt_bam
+            .map{ [ it[0].run_id, it[0].group, it[0].user, it[0].project_id, it] }
+            .groupTuple(by: [0, 1, 2, 3])
+            .map {
+                def files = it[4].flatten().findAll { item -> !(item instanceof Map) }
+                [ [ id:it[1]+"_"+it[2]+"_"+it[3], run_id:it[0], group: it[1], user:it[2], project_id:it[3]], files ]
+            }
+
+        //
+        // MODULE: Merge bams together
+        //
+        SAMTOOLS_MERGE (
+            ch_grouped_bam,
+            [[], []],
+            [[], []]
+        )
+        ch_versions = ch_versions.mix(SAMTOOLS_MERGE.out.versions)
+        ch_merged_bam = SAMTOOLS_MERGE.out.bam
+
+        //
+        // MODULE: Create summary of merged bam
+        //
+        DORADO_SUMMARY (
+            ch_merged_bam
+        )
+        ch_versions = ch_versions.mix(DORADO_SUMMARY.out.versions)
+
+        //
+        // CHANNEL: Filter out all bams with nothing in them
+        //
+        ch_merged_bam = ch_merged_bam
+            .filter { row ->
+                file(row[1]).size() >= 800
+            }
+
+        //
+        // MODULE: Run toulligqc on merged bam
+        //
+        TOULLIGQC_GROUPED (
+            ch_merged_bam,
+            ch_collected_pod5
+        )
+        ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
+
+        //
+        // CHANNEL: Group meta data by run_id,group,user,project and write to file
+        //
+        ch_grouped_meta = ch_filt_bam
+            .map{
+                def newMap = it[0].collectEntries { k, v -> [(k): v] }
+                newMap.sample_id = newMap.id
+                newMap.remove("id")
+                newMap = [("sample_id"): newMap.remove("sample_id")] + newMap
+                [newMap, it[1]]
+            }
+            .map{ [ it[0].run_id, it[0].group, it[0].user, it[0].project_id, it[0]] }
+            .groupTuple(by: [0, 1, 2, 3])
+            .map {
+                def meta = it[4]
+                def path = "${params.outdir}/grouped/${it[1]}/${it[2]}/asf/${it[3]}/${it[0]}/samplesheet.csv"
+                dump_meta(meta, path)
+            }
 
         //
         // MODULE: Collect software versions
@@ -385,17 +497,17 @@ workflow {
         ch_multiqc_files_all = Channel.empty()
         ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_multiqc_files)
         ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-        ch_multiqc_files_all = ch_multiqc_files_all.mix(PYCOQC_ALL.out.json.collect{it[1]}.ifEmpty([]))
-        ch_multiqc_files_all = ch_multiqc_files_all.mix(NANOPLOT_ALL.out.txt.collect{it[1]}.ifEmpty([]))
+        // ch_multiqc_files_all = ch_multiqc_files_all.mix(PYCOQC_ALL.out.json.collect{it[1]}.ifEmpty([]))
+        // ch_multiqc_files_all = ch_multiqc_files_all.mix(NANOPLOT_ALL.out.txt.collect{it[1]}.ifEmpty([]))
         ch_multiqc_files_all = ch_multiqc_files_all.collect().map{ [[id:"all"], it] }
 
         ch_multiqc_files_grouped = ch_grouped_fastqc
             .map { [ it[0].id, it[0], it ] }
-            .join ( PYCOQC_GROUPED.out.json.map{ [ it[0].id, it[1] ] } )
-            .join ( NANOPLOT_GROUPED.out.txt.map{ [ it[0].id, it[1] ] } )
-            .map { [ it[1], [ it[2][1].flatten(), it[3], it[4] ].flatten() ] }
+            // .join ( PYCOQC_GROUPED.out.json.map{ [ it[0].id, it[1] ] } )
+            // .join ( NANOPLOT_GROUPED.out.txt.map{ [ it[0].id, it[1] ] } )
+            .map { [ it[1], [ it[2][1].flatten() ].flatten() ] }
             .combine(ch_multiqc_files.collect())
-            .map { [ it[0], [it[1], it[2], it[3], it[4]].flatten() ] }
+            .map { [ it[0], [it[1], it[2]].flatten() ] }
 
         MULTIQC_ALL (
             ch_multiqc_files_all,

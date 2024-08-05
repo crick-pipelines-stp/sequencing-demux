@@ -16,7 +16,12 @@ workflow SAMPLESHEET_PARSE {
     // CHANNEL: Load csv and split columns into metadata
     //
     meta = SAMPLESHEET_CHECK.out.csv
-        .splitCsv ( header:true, sep:"," )
+        .splitCsv (header:true, sep:",")
+        .map {
+            it.group = it.group.replaceAll(" ", "_").toLowerCase()
+            it.user = it.user.replaceAll(" ", "_").toLowerCase()
+            it
+        }
 
     emit:
     meta // channel: [ val(meta) ]

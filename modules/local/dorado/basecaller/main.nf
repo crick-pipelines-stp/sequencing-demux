@@ -2,7 +2,7 @@ process DORADO_BASECALLER {
     tag "$meta.id"
     label 'process_high'
 
-    container 'docker.io/thecrick/pipetech_dorado:0.7.0-linux-x64'
+    container 'docker.io/thecrick/pipetech_dorado:0.7.1-linux-x64'
 
     input:
     tuple val(meta), path("pod5s/*")

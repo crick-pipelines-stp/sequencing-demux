@@ -1,68 +1,57 @@
 {
-    "name": "pipelines-technology/nanopore_demux",
-    "homePage": "https://github.com/crick-pipelines-stp/nanopore-demux",
-    "repos": {
-        "https://github.com/nf-core/modules.git": {
-            "modules": {
-                "nf-core": {
-                    "cat/cat": {
-                        "branch": "master",
-                        "git_sha": "9437e6053dccf4aafa022bfd6e7e9de67e625af8",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "chopper": {
-                        "branch": "master",
-                        "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "fastqc": {
-                        "branch": "master",
-                        "git_sha": "285a50500f9e02578d90b3ce6382ea3c30216acd",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "nanoplot": {
-                        "branch": "master",
-                        "git_sha": "a31407dfaf0cb0d04768d5cb439fc6f4523a6981",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "pycoqc": {
-                        "branch": "master",
-                        "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samtools/stats": {
-                        "branch": "master",
-                        "git_sha": "f4596fe0bdc096cf53ec4497e83defdb3a94ff62",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samtools/view": {
-                        "branch": "master",
-                        "git_sha": "0bd7d2333a88483aa0476acea172e9f5f6dd83bb",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "seqkit/seq": {
-                        "branch": "master",
-                        "git_sha": "2be41ca2cc780eca4293d1b0dd3850b0b7ac40a3",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    }
-                }
-            }
+  "name": "pipelines-technology/nanopore_demux",
+  "homePage": "https://github.com/crick-pipelines-stp/nanopore-demux",
+  "repos": {
+    "https://github.com/nf-core/modules.git": {
+      "modules": {
+        "nf-core": {
+          "cat/cat": {
+            "branch": "master",
+            "git_sha": "9437e6053dccf4aafa022bfd6e7e9de67e625af8",
+            "installed_by": ["modules"]
+          },
+          "chopper": {
+            "branch": "master",
+            "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
+            "installed_by": ["modules"]
+          },
+          "fastqc": {
+            "branch": "master",
+            "git_sha": "285a50500f9e02578d90b3ce6382ea3c30216acd",
+            "installed_by": ["modules"]
+          },
+          "nanoplot": {
+            "branch": "master",
+            "git_sha": "a31407dfaf0cb0d04768d5cb439fc6f4523a6981",
+            "installed_by": ["modules"]
+          },
+          "pycoqc": {
+            "branch": "master",
+            "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
+            "installed_by": ["modules"]
+          },
+          "samtools/merge": {
+            "branch": "master",
+            "git_sha": "04fbbc7c43cebc0b95d5b126f6d9fe4effa33519",
+            "installed_by": ["modules"]
+          },
+          "samtools/stats": {
+            "branch": "master",
+            "git_sha": "f4596fe0bdc096cf53ec4497e83defdb3a94ff62",
+            "installed_by": ["modules"]
+          },
+          "samtools/view": {
+            "branch": "master",
+            "git_sha": "0bd7d2333a88483aa0476acea172e9f5f6dd83bb",
+            "installed_by": ["modules"]
+          },
+          "seqkit/seq": {
+            "branch": "master",
+            "git_sha": "2be41ca2cc780eca4293d1b0dd3850b0b7ac40a3",
+            "installed_by": ["modules"]
+          }
         }
+      }
     }
+  }
 }
