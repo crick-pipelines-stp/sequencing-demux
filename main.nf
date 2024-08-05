@@ -151,8 +151,8 @@ workflow {
     //
     // CHANNEL: Search and add sequencing summary
     //
-    ch_sequencing_summary = Channel.fromPath("${params.run_dir}/sequencing_summary*.txt", checkIfExists: true)
-        .map{ [ [ id: it.simpleName ], it ] }
+    // ch_sequencing_summary = Channel.fromPath("${params.run_dir}/sequencing_summary*.txt", checkIfExists: true)
+    //     .map{ [ [ id: it.simpleName ], it ] }
 
     //
     // CHANNEL: Adding bam files to a channel if it exists
