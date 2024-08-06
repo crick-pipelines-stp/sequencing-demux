@@ -170,9 +170,9 @@ workflow {
         ch_samplesheet = Channel.from(file(params.samplesheet))
     }
 
-    // 
+    //
     // SUBWORKFLOW: check input samplesheet and add relevant info to metadata
-    // 
+    //
     SAMPLESHEET_PARSE (
         ch_samplesheet
     )
