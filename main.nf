@@ -151,8 +151,8 @@ workflow {
     //
     // CHANNEL: Search and add sequencing summary
     //
-    ch_sequencing_summary = Channel.fromPath("${params.run_dir}/sequencing_summary*.txt", checkIfExists: true)
-        .map{ [ [ id: it.simpleName ], it ] }
+    // ch_sequencing_summary = Channel.fromPath("${params.run_dir}/sequencing_summary*.txt", checkIfExists: true)
+    //     .map{ [ [ id: it.simpleName ], it ] }
 
     //
     // CHANNEL: Adding bam files to a channel if it exists
@@ -170,9 +170,9 @@ workflow {
         ch_samplesheet = Channel.from(file(params.samplesheet))
     }
 
-    // 
+    //
     // SUBWORKFLOW: check input samplesheet and add relevant info to metadata
-    // 
+    //
     SAMPLESHEET_PARSE (
         ch_samplesheet
     )
@@ -186,15 +186,16 @@ workflow {
         it.run_id = runid 
         it.id = it.sample_id
         it.remove("sample_id")
-        it 
+        it
     }
 
-    if (params.run_basecaller && !params.bam) {
+    if (params.run_basecaller) {
         //
-        // MODULE: Generate a bam file using the Dorado basecaller unless a bam file was already present as an input
+        // MODULE: Generate a bam file using pod5 files and any supplied bam to resume from
         //
         DORADO_BASECALLER (
             ch_pod5_files,
+            params.bam ? ch_bam.map{it[1]} : [],
             dorado_model,
             params.dorado_bc_kit ?: []
         )
