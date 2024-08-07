@@ -4,6 +4,7 @@ import nextflow.extension.FilesEx
 import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.security.SecureRandom
 
 //
 // ANSII Colours used for terminal logging
@@ -333,15 +334,25 @@ def dump_meta(meta, path) {
         def headers = meta[0].keySet()
         writer.writeLine(headers.join(','))
 
-    meta.each { map ->
-        def row = headers.collect { map[it] }
-        writer.writeLine(row.join(','))
+        meta.each { map ->
+            def row = headers.collect { map[it] }
+            writer.writeLine(row.join(','))
+        }
     }
-}
 
     // def temp_pf = new File(workflow.launchDir.toString(), ".${filename}")
     // FilesEx.copyTo(temp_pf.toPath(), "${params.outdir}/pipeline_info/params_${timestamp}.json")
     // temp_pf.delete()
+}
+
+def gen_id(length) {
+    def chars = (('A'..'Z') + ('a'..'z') + ('0'..'9')).join()
+    def random = new SecureRandom()
+    def sb = new StringBuilder(length)
+    (1..length).each {
+        sb.append(chars[random.nextInt(chars.length())])
+    }
+    return sb.toString()
 }
 
 
