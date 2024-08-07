@@ -22,6 +22,7 @@ include { multiqc_summary    } from './modules/local/util/logging/main'
 include { dump_parameters    } from './modules/local/util/logging/main'
 include { im_notification    } from './modules/local/util/logging/main'
 include { dump_meta          } from './modules/local/util/logging/main'
+include { gen_id             } from './modules/local/util/logging/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,27 +89,28 @@ def runid = file(params.run_dir).name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DORADO_BASECALLER                } from './modules/local/dorado/basecaller/main'
-include { DORADO_DEMUX                     } from './modules/local/dorado/demux/main'
-include { SAMTOOLS_VIEW as FILTER_READ_Q   } from './modules/nf-core/samtools/view/main'
-include { CHOPPER                          } from './modules/nf-core/chopper/main'
+include { DORADO_BASECALLER                   } from './modules/local/dorado/basecaller/main'
+include { SAMTOOLS_MERGE as MERGE_BASECALLING } from './modules/nf-core/samtools/merge/main'
+include { DORADO_DEMUX                        } from './modules/local/dorado/demux/main'
+include { SAMTOOLS_VIEW as FILTER_READ_Q      } from './modules/nf-core/samtools/view/main'
+include { CHOPPER                             } from './modules/nf-core/chopper/main'
 // include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main'
 // include { SAMTOOLS_CUSTOM_VIEW             } from './modules/local/samtools/custom_view/main'
 // include { LINUX_COMMAND as FILTER_QC       } from './modules/local/linux/command'
 // include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'
-include { FASTQC                           } from './modules/nf-core/fastqc/main'
+include { FASTQC                              } from './modules/nf-core/fastqc/main'
 // include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/main'
 // include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
 // include { PYCOQC as PYCOQC_ALL             } from './modules/nf-core/pycoqc/main'
 // include { PYCOQC as PYCOQC_GROUPED         } from './modules/nf-core/pycoqc/main'
-include { SAMTOOLS_VIEW as FILTER_BC       } from './modules/nf-core/samtools/view/main'
-include { SAMTOOLS_MERGE                   } from './modules/nf-core/samtools/merge/main'
-include { DORADO_SUMMARY                   } from './modules/local/dorado/summary/main'
-include { TOULLIGQC as TOULLIGQC_ALL       } from './modules/local/toulligqc/main'
-include { TOULLIGQC as TOULLIGQC_GROUPED   } from './modules/local/toulligqc/main'
-include { CUSTOM_DUMPSOFTWAREVERSIONS      } from './modules/local/custom_dumpsoftwareversions'
-include { MULTIQC as MULTIQC_ALL           } from './modules/local/multiqc/main'
-include { MULTIQC as MULTIQC_GROUPED       } from './modules/local/multiqc/main'
+include { SAMTOOLS_VIEW as FILTER_BC          } from './modules/nf-core/samtools/view/main'
+include { SAMTOOLS_MERGE as MERGE_GROUPS      } from './modules/nf-core/samtools/merge/main'
+include { DORADO_SUMMARY                      } from './modules/local/dorado/summary/main'
+include { TOULLIGQC as TOULLIGQC_ALL          } from './modules/local/toulligqc/main'
+include { TOULLIGQC as TOULLIGQC_GROUPED      } from './modules/local/toulligqc/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS         } from './modules/local/custom_dumpsoftwareversions'
+include { MULTIQC as MULTIQC_ALL              } from './modules/local/multiqc/main'
+include { MULTIQC as MULTIQC_GROUPED          } from './modules/local/multiqc/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,8 +147,8 @@ workflow {
     // CHANNEL: Put all pod5 generated files and their corresponding sample IDs into a single channel 
     //
     ch_pod5_files = ch_pod5_files
-        .collect()
-        .map{ [[ id: 'pod5' ], it ] }
+        .collate(params.dorado_batch_num)
+        .map{ [[ id: it[0].simpleName.substring(0, 26) ], it ] }
 
     //
     // CHANNEL: Search and add sequencing summary
@@ -201,6 +203,29 @@ workflow {
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
         ch_bam      = DORADO_BASECALLER.out.bam
+
+        //
+        // CHANNEL: Create basecalling merge channels
+        //
+        ch_bc_merge = ch_bam
+            .collect{ it[1] }
+            .branch {
+                tomerge: it.size() > 1
+                    return [[ id: it[0].simpleName.substring(0, 26) ], it ]
+                pass: true
+                    return [[ id: it[0].simpleName.substring(0, 26) ], it ]
+            }
+
+        //
+        // MODULE: Merged basecalled bams if required
+        //
+        MERGE_BASECALLING (
+            ch_bc_merge.tomerge,
+            [[],[]],
+            [[],[]]
+        )
+        ch_versions = ch_versions.mix(MERGE_BASECALLING.out.versions)
+        ch_bam      = MERGE_BASECALLING.out.bam.mix(ch_bc_merge.pass)
     }
 
     if (params.run_demux) {
@@ -425,13 +450,13 @@ workflow {
         //
         // MODULE: Merge bams together
         //
-        SAMTOOLS_MERGE (
+        MERGE_GROUPS (
             ch_grouped_bam,
             [[], []],
             [[], []]
         )
-        ch_versions = ch_versions.mix(SAMTOOLS_MERGE.out.versions)
-        ch_merged_bam = SAMTOOLS_MERGE.out.bam
+        ch_versions = ch_versions.mix(MERGE_GROUPS.out.versions)
+        ch_merged_bam = MERGE_GROUPS.out.bam
 
         //
         // MODULE: Create summary of merged bam
