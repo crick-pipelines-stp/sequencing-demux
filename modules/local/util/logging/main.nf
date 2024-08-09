@@ -323,7 +323,6 @@ def dump_parameters(workflow, params) {
     temp_pf.delete()
 }
 
-
 //
 // Dump channel meta into CSV
 //
@@ -345,6 +344,21 @@ def dump_meta(meta, path) {
     // temp_pf.delete()
 }
 
+//
+// Generate a workflow complete file
+//
+def workflow_complete_summary(workflow, path) {
+    def outputFile = new File(path)
+    outputFile.parentFile.mkdirs()
+    outputFile.withWriter { writer ->
+        writer.writeLine("complete\tduration")
+        writer.writeLine(workflow.complete.toString() + "\t" + workflow.duration.toString())
+    }
+}
+
+//
+// Generate a random ID
+//
 def gen_id(length) {
     def chars = (('A'..'Z') + ('a'..'z') + ('0'..'9')).join()
     def random = new SecureRandom()
@@ -354,7 +368,6 @@ def gen_id(length) {
     }
     return sb.toString()
 }
-
 
 //
 // Construct and send a notification to a web server as JSON
