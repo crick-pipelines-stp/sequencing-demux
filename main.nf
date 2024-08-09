@@ -16,13 +16,14 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { params_summary_map } from './modules/local/util/logging/main'
-include { summary_log        } from './modules/local/util/logging/main'
-include { multiqc_summary    } from './modules/local/util/logging/main'
-include { dump_parameters    } from './modules/local/util/logging/main'
-include { im_notification    } from './modules/local/util/logging/main'
-include { dump_meta          } from './modules/local/util/logging/main'
-include { gen_id             } from './modules/local/util/logging/main'
+include { params_summary_map        } from './modules/local/util/logging/main'
+include { summary_log               } from './modules/local/util/logging/main'
+include { multiqc_summary           } from './modules/local/util/logging/main'
+include { dump_parameters           } from './modules/local/util/logging/main'
+include { im_notification           } from './modules/local/util/logging/main'
+include { dump_meta                 } from './modules/local/util/logging/main'
+include { gen_id                    } from './modules/local/util/logging/main'
+include { workflow_complete_summary } from './modules/local/util/logging/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -561,6 +562,9 @@ workflow {
 
 workflow.onComplete {
     dump_parameters(workflow, params)
+    if(workflow.success) {
+        workflow_complete_summary(workflow, "${params.outdir}/pipeline_info/workflow_complete.txt")
+    }
 
     if (params.hook_url) {
         im_notification(workflow, params, projectDir, runid, summary_params, log)
