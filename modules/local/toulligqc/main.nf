@@ -32,6 +32,7 @@ process TOULLIGQC {
     toulligqc \\
         $input_file \\
         --output-directory ${prefix} \\
+        --thread $task.cpus \\
         $pod5_arg \\
         $args
 
