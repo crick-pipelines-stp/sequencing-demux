@@ -178,6 +178,11 @@ workflow {
         it
     }
 
+    //
+    // CHANNEL: Collect barcode names
+    //
+    ch_barcodes = ch_meta.map{ it.barcode }.toSortedList()
+
     if (params.run_basecaller) {
         //
         // MODULE: Generate a bam file using pod5 files and any supplied bam to resume from
@@ -298,7 +303,8 @@ workflow {
         //
         TOULLIGQC_ALL (
             ch_bam,
-            ch_collected_pod5
+            ch_collected_pod5,
+            ch_barcodes
         )
         ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
 
@@ -375,7 +381,8 @@ workflow {
         //
         TOULLIGQC_GROUPED (
             ch_merged_bam,
-            ch_collected_pod5
+            ch_collected_pod5,
+            ch_barcodes
         )
         ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
 
