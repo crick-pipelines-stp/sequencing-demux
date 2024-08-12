@@ -20,6 +20,9 @@ workflow SAMPLESHEET_PARSE {
         .map {
             it.group = it.group.replaceAll(" ", "_").toLowerCase()
             it.user = it.user.replaceAll(" ", "_").toLowerCase()
+            if(params.dorado_bc_kit) {
+                it.barcode = params.dorado_bc_kit + "_" + it.barcode
+            }
             it
         }
 
