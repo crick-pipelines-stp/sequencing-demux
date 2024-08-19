@@ -20,6 +20,12 @@ workflow SAMPLESHEET_PARSE {
         .map {
             it.group = it.group.replaceAll(" ", "_").toLowerCase()
             it.user = it.user.replaceAll(" ", "_").toLowerCase()
+            if(params.dorado_bc_parse_pos != null && params.dorado_bc_kit != null) {
+                it.barcode = "barcode" + it.barcode.substring(params.dorado_bc_parse_pos, params.dorado_bc_parse_pos + 2)
+            }
+            if(params.dorado_bc_kit != null) {
+                it.barcode = params.dorado_bc_kit + "_" + it.barcode
+            }
             it
         }
 

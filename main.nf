@@ -16,12 +16,14 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { params_summary_map } from './modules/local/util/logging/main'
-include { summary_log        } from './modules/local/util/logging/main'
-include { multiqc_summary    } from './modules/local/util/logging/main'
-include { dump_parameters    } from './modules/local/util/logging/main'
-include { im_notification    } from './modules/local/util/logging/main'
-include { dump_meta          } from './modules/local/util/logging/main'
+include { params_summary_map        } from './modules/local/util/logging/main'
+include { summary_log               } from './modules/local/util/logging/main'
+include { multiqc_summary           } from './modules/local/util/logging/main'
+include { dump_parameters           } from './modules/local/util/logging/main'
+include { im_notification           } from './modules/local/util/logging/main'
+include { dump_meta                 } from './modules/local/util/logging/main'
+include { gen_id                    } from './modules/local/util/logging/main'
+include { workflow_complete_summary } from './modules/local/util/logging/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,27 +90,20 @@ def runid = file(params.run_dir).name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DORADO_BASECALLER                } from './modules/local/dorado/basecaller/main'
-include { DORADO_DEMUX                     } from './modules/local/dorado/demux/main'
-include { SAMTOOLS_VIEW as FILTER_READ_Q   } from './modules/nf-core/samtools/view/main'
-include { CHOPPER                          } from './modules/nf-core/chopper/main'
-// include { SEQKIT_SEQ                       } from './modules/nf-core/seqkit/seq/main'
-// include { SAMTOOLS_CUSTOM_VIEW             } from './modules/local/samtools/custom_view/main'
-// include { LINUX_COMMAND as FILTER_QC       } from './modules/local/linux/command'
-// include { CAT_CAT as CAT_READ_IDS          } from './modules/nf-core/cat/cat/main'
-include { FASTQC                           } from './modules/nf-core/fastqc/main'
-// include { NANOPLOT as NANOPLOT_ALL         } from './modules/nf-core/nanoplot/main'
-// include { NANOPLOT as NANOPLOT_GROUPED     } from './modules/nf-core/nanoplot/main'
-// include { PYCOQC as PYCOQC_ALL             } from './modules/nf-core/pycoqc/main'
-// include { PYCOQC as PYCOQC_GROUPED         } from './modules/nf-core/pycoqc/main'
-include { SAMTOOLS_VIEW as FILTER_BC       } from './modules/nf-core/samtools/view/main'
-include { SAMTOOLS_MERGE                   } from './modules/nf-core/samtools/merge/main'
-include { DORADO_SUMMARY                   } from './modules/local/dorado/summary/main'
-include { TOULLIGQC as TOULLIGQC_ALL       } from './modules/local/toulligqc/main'
-include { TOULLIGQC as TOULLIGQC_GROUPED   } from './modules/local/toulligqc/main'
-include { CUSTOM_DUMPSOFTWAREVERSIONS      } from './modules/local/custom_dumpsoftwareversions'
-include { MULTIQC as MULTIQC_ALL           } from './modules/local/multiqc/main'
-include { MULTIQC as MULTIQC_GROUPED       } from './modules/local/multiqc/main'
+include { DORADO_BASECALLER                   } from './modules/local/dorado/basecaller/main'
+include { SAMTOOLS_MERGE as MERGE_BASECALLING } from './modules/nf-core/samtools/merge/main'
+include { DORADO_DEMUX                        } from './modules/local/dorado/demux/main'
+include { SAMTOOLS_VIEW as FILTER_READ_Q      } from './modules/nf-core/samtools/view/main'
+include { CHOPPER                             } from './modules/nf-core/chopper/main'
+include { FASTQC                              } from './modules/nf-core/fastqc/main'
+include { SAMTOOLS_VIEW as FILTER_BC          } from './modules/nf-core/samtools/view/main'
+include { SAMTOOLS_MERGE as MERGE_GROUPS      } from './modules/nf-core/samtools/merge/main'
+include { DORADO_SUMMARY                      } from './modules/local/dorado/summary/main'
+include { TOULLIGQC as TOULLIGQC_ALL          } from './modules/local/toulligqc/main'
+include { TOULLIGQC as TOULLIGQC_GROUPED      } from './modules/local/toulligqc/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS         } from './modules/local/custom_dumpsoftwareversions'
+include { MULTIQC as MULTIQC_ALL              } from './modules/local/multiqc/main'
+include { MULTIQC as MULTIQC_GROUPED          } from './modules/local/multiqc/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,14 +140,8 @@ workflow {
     // CHANNEL: Put all pod5 generated files and their corresponding sample IDs into a single channel 
     //
     ch_pod5_files = ch_pod5_files
-        .collect()
-        .map{ [[ id: 'pod5' ], it ] }
-
-    //
-    // CHANNEL: Search and add sequencing summary
-    //
-    ch_sequencing_summary = Channel.fromPath("${params.run_dir}/sequencing_summary*.txt", checkIfExists: true)
-        .map{ [ [ id: it.simpleName ], it ] }
+        .collate(params.dorado_batch_num)
+        .map{ [[ id: it[0].simpleName.substring(0, 26) ], it ] }
 
     //
     // CHANNEL: Adding bam files to a channel if it exists
@@ -170,9 +159,9 @@ workflow {
         ch_samplesheet = Channel.from(file(params.samplesheet))
     }
 
-    // 
+    //
     // SUBWORKFLOW: check input samplesheet and add relevant info to metadata
-    // 
+    //
     SAMPLESHEET_PARSE (
         ch_samplesheet
     )
@@ -186,20 +175,49 @@ workflow {
         it.run_id = runid 
         it.id = it.sample_id
         it.remove("sample_id")
-        it 
+        it
     }
 
-    if (params.run_basecaller && !params.bam) {
+    //
+    // CHANNEL: Collect barcode names
+    //
+    ch_barcodes = ch_meta.map{ it.barcode }.toSortedList()
+
+    if (params.run_basecaller) {
         //
-        // MODULE: Generate a bam file using the Dorado basecaller unless a bam file was already present as an input
+        // MODULE: Generate a bam file using pod5 files and any supplied bam to resume from
         //
         DORADO_BASECALLER (
             ch_pod5_files,
+            params.bam ? ch_bam.map{it[1]} : [],
             dorado_model,
             params.dorado_bc_kit ?: []
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
         ch_bam      = DORADO_BASECALLER.out.bam
+
+        //
+        // CHANNEL: Create basecalling merge channels
+        //
+        ch_bc_merge = ch_bam
+            .collect{ it[1] }
+            .branch {
+                tomerge: it.size() > 1
+                    return [[ id: it[0].simpleName.substring(0, 26) ], it ]
+                pass: true
+                    return [[ id: it[0].simpleName.substring(0, 26) ], it ]
+            }
+
+        //
+        // MODULE: Merged basecalled bams if required
+        //
+        MERGE_BASECALLING (
+            ch_bc_merge.tomerge,
+            [[],[]],
+            [[],[]]
+        )
+        ch_versions = ch_versions.mix(MERGE_BASECALLING.out.versions)
+        ch_bam      = MERGE_BASECALLING.out.bam.mix(ch_bc_merge.pass)
     }
 
     if (params.run_demux) {
@@ -256,81 +274,6 @@ workflow {
     }
 
     if(params.run_qc) {
-
-        // if(params.emit_bam) {
-        //     //
-        //     // MODULE: Extract read ids from bam file
-        //     //
-        //     SAMTOOLS_CUSTOM_VIEW (
-        //         ch_demux_bam.map{[it[0], it[1], []]}
-        //     )
-        //     ch_versions = ch_versions.mix(SAMTOOLS_CUSTOM_VIEW.out.versions)
-        //     ch_read_ids = SAMTOOLS_CUSTOM_VIEW.out.file
-        // }
-        // else {
-        //     //
-        //     // MODULE: Extract read ids from fastq file
-        //     //
-        //     SEQKIT_SEQ (
-        //         ch_demux_fastq
-        //     )
-        //     ch_versions = ch_versions.mix(SEQKIT_SEQ.out.versions)
-        //     ch_read_ids = SEQKIT_SEQ.out.fastx
-        // }
-
-        //
-        // CHANNEL: Group read ids by run_id,group,user,project
-        //
-        // ch_grouped_read_ids = ch_read_ids
-        //     .map{ [ it[0].run_id, it[0].group, it[0].user, it[0].project_id, it ] }
-        //     .groupTuple(by: [0, 1, 2, 3])
-        //     .map {
-        //         def files = it[4].flatten().findAll { item -> !(item instanceof Map) }
-        //         [ [ id:it[1]+"_"+it[2]+"_"+it[3], run_id:it[0], group: it[1], user:it[2], project_id:it[3]], files ]
-        //     }
-
-        //
-        // MODULE: Merge read ids from the same group
-        //
-        // CAT_READ_IDS (
-        //     ch_grouped_read_ids
-        // )
-        // ch_versions         = ch_versions.mix(CAT_READ_IDS.out.versions)
-        // ch_grouped_read_ids = CAT_READ_IDS.out.file_out
-
-        //
-        // MODULE: Filter sequencing summary file based on reads from groups
-        //
-        // FILTER_QC (
-        //     ch_grouped_read_ids,
-        //     ch_sequencing_summary.collect()
-        // )
-        // ch_sequencing_summary_grouped = FILTER_QC.out.file.map{ [ it[0], it[1][1] ] }
-
-        //
-        // CHANNEL: Filter out all summarys with nothing in them
-        //
-        // ch_sequencing_summary_grouped = ch_sequencing_summary_grouped
-        //     .filter { row ->
-        //         file(row[1]).size() >= 500
-        //     }
-
-        //
-        // MODULE: Run Nanoplot on all samples
-        //
-        // NANOPLOT_ALL (
-        //     ch_sequencing_summary
-        // )
-        // ch_versions = ch_versions.mix(NANOPLOT_ALL.out.versions)
-
-        //
-        // MODULE: Run pycoqc on all samples
-        //
-        // PYCOQC_ALL (
-        //     ch_sequencing_summary
-        // )
-        // ch_versions = ch_versions.mix(PYCOQC_ALL.out.versions)
-
         ch_fastqc_zip     = Channel.empty()
         ch_grouped_fastqc = Channel.empty()
         if(!params.emit_bam) {
@@ -356,27 +299,12 @@ workflow {
         }
 
         //
-        // MODULE: Run Nanoplot on grouped samples
-        //
-        // NANOPLOT_GROUPED (
-        //     ch_sequencing_summary_grouped
-        // )
-        // ch_versions = ch_versions.mix(NANOPLOT_GROUPED.out.versions)
-
-        //
-        // MODULE: Run pycoqc on grouped samples
-        //
-        // PYCOQC_GROUPED (
-        //     ch_sequencing_summary_grouped
-        // )
-        // ch_versions = ch_versions.mix(PYCOQC_GROUPED.out.versions)
-
-        //
         // MODULE: Run toulligqc on all samples
         //
         TOULLIGQC_ALL (
             ch_bam,
-            ch_collected_pod5
+            ch_collected_pod5,
+            ch_barcodes
         )
         ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
 
@@ -424,13 +352,13 @@ workflow {
         //
         // MODULE: Merge bams together
         //
-        SAMTOOLS_MERGE (
+        MERGE_GROUPS (
             ch_grouped_bam,
             [[], []],
             [[], []]
         )
-        ch_versions = ch_versions.mix(SAMTOOLS_MERGE.out.versions)
-        ch_merged_bam = SAMTOOLS_MERGE.out.bam
+        ch_versions = ch_versions.mix(MERGE_GROUPS.out.versions)
+        ch_merged_bam = MERGE_GROUPS.out.bam
 
         //
         // MODULE: Create summary of merged bam
@@ -453,7 +381,8 @@ workflow {
         //
         TOULLIGQC_GROUPED (
             ch_merged_bam,
-            ch_collected_pod5
+            ch_collected_pod5,
+            ch_barcodes
         )
         ch_versions = ch_versions.mix(TOULLIGQC_ALL.out.versions)
 
@@ -497,14 +426,10 @@ workflow {
         ch_multiqc_files_all = Channel.empty()
         ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_multiqc_files)
         ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-        // ch_multiqc_files_all = ch_multiqc_files_all.mix(PYCOQC_ALL.out.json.collect{it[1]}.ifEmpty([]))
-        // ch_multiqc_files_all = ch_multiqc_files_all.mix(NANOPLOT_ALL.out.txt.collect{it[1]}.ifEmpty([]))
         ch_multiqc_files_all = ch_multiqc_files_all.collect().map{ [[id:"all"], it] }
 
         ch_multiqc_files_grouped = ch_grouped_fastqc
             .map { [ it[0].id, it[0], it ] }
-            // .join ( PYCOQC_GROUPED.out.json.map{ [ it[0].id, it[1] ] } )
-            // .join ( NANOPLOT_GROUPED.out.txt.map{ [ it[0].id, it[1] ] } )
             .map { [ it[1], [ it[2][1].flatten() ].flatten() ] }
             .combine(ch_multiqc_files.collect())
             .map { [ it[0], [it[1], it[2]].flatten() ] }
@@ -535,6 +460,9 @@ workflow {
 
 workflow.onComplete {
     dump_parameters(workflow, params)
+    if(workflow.success) {
+        workflow_complete_summary(workflow, "${params.outdir}/pipeline_info/workflow_complete.txt")
+    }
 
     if (params.hook_url) {
         im_notification(workflow, params, projectDir, runid, summary_params, log)
