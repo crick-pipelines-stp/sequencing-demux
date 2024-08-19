@@ -80,6 +80,29 @@ if(params.dorado_model) {
 if(params.dorado_bc_kit && !(params.dorado_bc_kit in params.bc_kits)) {
     exit 1, "Invalid barcode kit specified: ${params.dorado_bc_kit}"
 }
+// Extract barcode kit value from the summary file
+if !(params.dorado_bc_kit) {
+    // Find the summary file
+    def summaryFileDir = file("${projectDir}")
+    def summaryFile = summaryFileDir.list().find { it.contains('sequencing_summary') && it.endsWith('.txt') }
+    // Check if a summary file was found
+    if (!summaryFile) {
+        exit 1, "No summary file found in ${summaryFileDir}."
+    }
+    // Read the entire content of the summary file as a single string
+    def summaryContent = summaryFile.text
+
+    // Find the first matching barcode kit in the summary file
+    def extrapolatedBcKit = params.bc_kits.find { bc_kit ->
+        summaryContent.contains(bc_kit)
+    }
+
+    // Set `params.dorado_bc_kit` to the found kit or null if no match
+    params.dorado_bc_kit = extrapolatedBcKit ?: null
+    if (!params.dorado_bc_kit) {
+        exit 1, "No valid barcode kit found in the summary file."
+    } 
+}
 
 // Extract run_id
 def runid = file(params.run_dir).name
