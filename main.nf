@@ -77,20 +77,23 @@ if(params.dorado_model) {
 }
 
 // Check bc-kit
+def dorado_bc_kit = null
 if(params.dorado_bc_kit && !(params.dorado_bc_kit in params.bc_kits)) {
     exit 1, "Invalid barcode kit specified: ${params.dorado_bc_kit}"
 }
 // Extract barcode kit value from the summary file
-if !(params.dorado_bc_kit) {
+if (!params.dorado_bc_kit) {
     // Find the summary file
-    def summaryFileDir = file("${projectDir}")
-    def summaryFile = summaryFileDir.list().find { it.contains('sequencing_summary') && it.endsWith('.txt') }
+    def summaryFileDir = new File(params.run_dir)
+    def summaryFileName = summaryFileDir.list().find { it.contains('final_summary') && it.endsWith('.txt') }
     // Check if a summary file was found
-    if (!summaryFile) {
-        exit 1, "No summary file found in ${summaryFileDir}."
+    if (!summaryFileName) {
+        exit 1, "No final summary file found in ${summaryFileDir}."
     }
+    // Create a File object from the filename
+    def summaryFile = new File(summaryFileDir, summaryFileName)
     // Read the entire content of the summary file as a single string
-    def summaryContent = summaryFile.text
+    def summaryContent = summaryFile.readLines().join('\n')
 
     // Find the first matching barcode kit in the summary file
     def extrapolatedBcKit = params.bc_kits.find { bc_kit ->
@@ -98,12 +101,8 @@ if !(params.dorado_bc_kit) {
     }
 
     // Set `params.dorado_bc_kit` to the found kit or null if no match
-    params.dorado_bc_kit = extrapolatedBcKit ?: null
-    if (!params.dorado_bc_kit) {
-        exit 1, "No valid barcode kit found in the summary file."
-    } 
+    dorado_bc_kit = extrapolatedBcKit ?: null
 }
-
 // Extract run_id
 def runid = file(params.run_dir).name
 
@@ -214,7 +213,7 @@ workflow {
             ch_pod5_files,
             params.bam ? ch_bam.map{it[1]} : [],
             dorado_model,
-            params.dorado_bc_kit ?: []
+            dorado_bc_kit ?: []
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
         ch_bam      = DORADO_BASECALLER.out.bam
