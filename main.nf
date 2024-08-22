@@ -103,6 +103,7 @@ if (!params.dorado_bc_kit) {
     // Set `params.dorado_bc_kit` to the found kit or null if no match
     dorado_bc_kit = extrapolatedBcKit ?: null
 }
+
 // Extract run_id
 def runid = file(params.run_dir).name
 
