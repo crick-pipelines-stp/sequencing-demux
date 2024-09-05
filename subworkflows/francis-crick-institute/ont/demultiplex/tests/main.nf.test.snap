@@ -1,0 +1,82 @@
+{
+    "simplex_resume": {
+        "content": [
+            [
+                "versions.yml:md5,a2381d271da27bf7e7ac07e0bb733c2b",
+                "versions.yml:md5,c8aa2b4d1847fd026d3af24d37133d99",
+                "versions.yml:md5,f09825a9b3f50d7f208f71cee9fbde60"
+            ]
+        ],
+        "meta": {
+            "nf-test": "0.9.0",
+            "nextflow": "24.04.4"
+        },
+        "timestamp": "2024-09-05T14:34:36.981398"
+    },
+    "simplex_emitbam": {
+        "content": [
+            [
+                "versions.yml:md5,a2381d271da27bf7e7ac07e0bb733c2b",
+                "versions.yml:md5,c8aa2b4d1847fd026d3af24d37133d99"
+            ]
+        ],
+        "meta": {
+            "nf-test": "0.9.0",
+            "nextflow": "24.04.4"
+        },
+        "timestamp": "2024-09-05T14:32:02.314719"
+    },
+    "multiplex_parsebc": {
+        "content": [
+            [
+                "versions.yml:md5,a2381d271da27bf7e7ac07e0bb733c2b"
+            ]
+        ],
+        "meta": {
+            "nf-test": "0.9.0",
+            "nextflow": "24.04.4"
+        },
+        "timestamp": "2024-09-05T14:34:43.557866"
+    },
+    "multiplex_default": {
+        "content": [
+            [
+                "versions.yml:md5,a2381d271da27bf7e7ac07e0bb733c2b"
+            ]
+        ],
+        "meta": {
+            "nf-test": "0.9.0",
+            "nextflow": "24.04.4"
+        },
+        "timestamp": "2024-09-05T14:34:40.280274"
+    },
+    "simple_batch": {
+        "content": [
+            [
+                "versions.yml:md5,a2381d271da27bf7e7ac07e0bb733c2b",
+                "versions.yml:md5,c8aa2b4d1847fd026d3af24d37133d99",
+                "versions.yml:md5,c8aa2b4d1847fd026d3af24d37133d99",
+                "versions.yml:md5,c8aa2b4d1847fd026d3af24d37133d99",
+                "versions.yml:md5,f09825a9b3f50d7f208f71cee9fbde60"
+            ]
+        ],
+        "meta": {
+            "nf-test": "0.9.0",
+            "nextflow": "24.04.4"
+        },
+        "timestamp": "2024-09-05T14:33:43.768903"
+    },
+    "simplex_default": {
+        "content": [
+            [
+                "versions.yml:md5,a2381d271da27bf7e7ac07e0bb733c2b",
+                "versions.yml:md5,c8aa2b4d1847fd026d3af24d37133d99"
+            ]
+        ],
+        "meta": {
+            "nf-test": "0.9.0",
+            "nextflow": "24.04.4"
+        },
+        "timestamp": "2024-09-05T14:31:39.183893"
+    }
+}
