@@ -77,7 +77,7 @@ if(params.dorado_model) {
 }
 
 // Check bc-kit
-def dorado_bc_kit = null
+def dorado_bc_kit = params.dorado_bc_kit
 if(params.dorado_bc_kit && !(params.dorado_bc_kit in params.bc_kits)) {
     exit 1, "Invalid barcode kit specified: ${params.dorado_bc_kit}"
 }
