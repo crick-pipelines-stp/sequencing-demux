@@ -12,8 +12,23 @@
           },
           "dorado/demux": {
             "branch": "main",
-            "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
+            "git_sha": "5a22d587a8442e39b3a94bb1b2547104e20fad8d",
             "installed_by": ["demultiplex", "ont/demultiplex"]
+          },
+          "dorado/summary": {
+            "branch": "main",
+            "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
+            "installed_by": ["modules"]
+          },
+          "util/io": {
+            "branch": "main",
+            "git_sha": "7f83671f83f701382a94ca3c7978e5f445496062",
+            "installed_by": ["modules"]
+          },
+          "util/logging": {
+            "branch": "main",
+            "git_sha": "5a8bdd7d49129f3a72d745d35d5f4b3b7d794175",
+            "installed_by": ["modules"]
           }
         }
       },
@@ -21,7 +36,7 @@
         "francis-crick-institute": {
           "ont/demultiplex": {
             "branch": "main",
-            "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
+            "git_sha": "5a22d587a8442e39b3a94bb1b2547104e20fad8d",
             "installed_by": ["subworkflows"]
           }
         }
