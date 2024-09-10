@@ -14,8 +14,8 @@ process SAMTOOLS_FASTQ {
     output:
     // tuple val(meta), path("*_{1,2}.fastq.gz")      , optional:true, emit: fastq
     // tuple val(meta), path("*_interleaved.fastq")   , optional:true, emit: interleaved
-    tuple val(meta), path("*_singleton.fastq.gz")  , optional:true, emit: singleton
-    // tuple val(meta), path("*_other.fastq.gz")      , optional:true, emit: other
+    //tuple val(meta), path("*_singleton.fastq.gz")  , optional:true, emit: singleton
+    tuple val(meta), path("*_ont.fastq.gz")      , optional:true, emit: reads
     path  "versions.yml"                           , emit: versions
 
     when:
@@ -32,7 +32,7 @@ process SAMTOOLS_FASTQ {
         fastq \\
         $args \\
         --threads ${task.cpus-1} \\
-        -0 ${prefix}_other.fastq.gz \\
+        -0 ${prefix}_ont.fastq.gz \\
         $input \\
         $output
 

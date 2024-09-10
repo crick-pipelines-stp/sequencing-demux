@@ -124,11 +124,11 @@ workflow {
         // MODULE: Demultiplex nanopore data
         //
         ONT_DEMULTIPLEX(
-            params.dorado_auto_model,
+            params.dorado_model,
             params.dorado_bc_kit,
             true,
             params.dorado_bc_parse_pos,
-            true,
+            params.dorado_append_bc,
             params.dorado_batch_num,
             params.run_dir,
             params.bam,
@@ -177,7 +177,7 @@ workflow {
         // MODULE: Run toulligqc on all samples
         //
         TOULLIGQC_ALL (
-            ch_demux_bam,
+            ch_basecalled_bam,
             ch_collected_pod5,
             ch_barcodes
         )
@@ -258,7 +258,7 @@ workflow {
             false
         )
         ch_versions = ch_versions.mix(RAW_BAM_TO_FASTQ.out.versions)
-        ch_raw_fastq = RAW_BAM_TO_FASTQ.out.singleton
+        ch_raw_fastq = RAW_BAM_TO_FASTQ.out.reads
 
         //
         // MODULE: Convert filtered bams to fastq
@@ -268,7 +268,7 @@ workflow {
             false
         )
         ch_versions = ch_versions.mix(FILT_BAM_TO_FASTQ.out.versions)
-        ch_filt_fastq = FILT_BAM_TO_FASTQ.out.singleton
+        ch_filt_fastq = FILT_BAM_TO_FASTQ.out.reads
 
         //
         // MODULE: Run fastqc on fastq files
