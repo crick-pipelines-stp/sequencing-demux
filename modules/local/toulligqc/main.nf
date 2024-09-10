@@ -3,7 +3,7 @@ process TOULLIGQC {
     label 'process_med_memory'
     tag "$meta.id"
 
-    container "docker.io/genomicpariscentre/toulligqc:2.7"
+    container "docker.io/genomicpariscentre/toulligqc:2.7.1"
 
     input:
     tuple val(meta), path(ontfile)
