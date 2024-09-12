@@ -150,6 +150,9 @@ workflow {
             it[0].run_id = runid
             it
         }
+        ch_demux_bam.collect{it[0]}.map {
+            dump_meta(it, "${params.outdir}/pipeline_info/sample_meta.csv")
+        }
 
         //
         // MODULE: Output the raw demux bams if required
