@@ -20,6 +20,11 @@
             "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
             "installed_by": ["modules"]
           },
+          "samplesheet/check": {
+            "branch": "main",
+            "git_sha": "05e26cf6ac616229a7e00ec2ef967845fcd2aa00",
+            "installed_by": ["modules"]
+          },
           "util/io": {
             "branch": "main",
             "git_sha": "7f83671f83f701382a94ca3c7978e5f445496062",
@@ -36,7 +41,7 @@
         "francis-crick-institute": {
           "ont/demultiplex": {
             "branch": "main",
-            "git_sha": "3c1af9d7a1319f5f938c3d36957556084bed146f",
+            "git_sha": "05e26cf6ac616229a7e00ec2ef967845fcd2aa00",
             "installed_by": ["subworkflows"]
           }
         }
