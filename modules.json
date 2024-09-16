@@ -1,77 +1,102 @@
 {
-  "name": "pipelines-technology/nanopore_demux",
-  "homePage": "https://github.com/crick-pipelines-stp/nanopore-demux",
-  "repos": {
-    "https://github.com/FrancisCrickInstitute/nextflow-modules": {
-      "modules": {
-        "francis-crick-institute": {
-          "dorado/basecaller": {
-            "branch": "main",
-            "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
-            "installed_by": ["demultiplex", "ont/demultiplex"]
-          },
-          "dorado/demux": {
-            "branch": "main",
-            "git_sha": "5a22d587a8442e39b3a94bb1b2547104e20fad8d",
-            "installed_by": ["demultiplex", "ont/demultiplex"]
-          },
-          "dorado/summary": {
-            "branch": "main",
-            "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
-            "installed_by": ["modules"]
-          },
-          "samplesheet/check": {
-            "branch": "main",
-            "git_sha": "05e26cf6ac616229a7e00ec2ef967845fcd2aa00",
-            "installed_by": ["modules"]
-          },
-          "util/io": {
-            "branch": "main",
-            "git_sha": "7f83671f83f701382a94ca3c7978e5f445496062",
-            "installed_by": ["modules"]
-          },
-          "util/logging": {
-            "branch": "main",
-            "git_sha": "5a8bdd7d49129f3a72d745d35d5f4b3b7d794175",
-            "installed_by": ["modules"]
-          }
+    "name": "pipelines-technology/nanopore_demux",
+    "homePage": "https://github.com/crick-pipelines-stp/nanopore-demux",
+    "repos": {
+        "https://github.com/FrancisCrickInstitute/nextflow-modules": {
+            "modules": {
+                "francis-crick-institute": {
+                    "dorado/basecaller": {
+                        "branch": "main",
+                        "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
+                        "installed_by": [
+                            "demultiplex",
+                            "ont/demultiplex"
+                        ]
+                    },
+                    "dorado/demux": {
+                        "branch": "main",
+                        "git_sha": "5a22d587a8442e39b3a94bb1b2547104e20fad8d",
+                        "installed_by": [
+                            "demultiplex",
+                            "ont/demultiplex"
+                        ]
+                    },
+                    "dorado/summary": {
+                        "branch": "main",
+                        "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "samplesheet/check": {
+                        "branch": "main",
+                        "git_sha": "05e26cf6ac616229a7e00ec2ef967845fcd2aa00",
+                        "installed_by": [
+                            "ont/demultiplex"
+                        ]
+                    },
+                    "util/io": {
+                        "branch": "main",
+                        "git_sha": "7f83671f83f701382a94ca3c7978e5f445496062",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "util/logging": {
+                        "branch": "main",
+                        "git_sha": "5a8bdd7d49129f3a72d745d35d5f4b3b7d794175",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    }
+                }
+            },
+            "subworkflows": {
+                "francis-crick-institute": {
+                    "ont/demultiplex": {
+                        "branch": "main",
+                        "git_sha": "271e34d05f3db9b7613b21497153a41726da1250",
+                        "installed_by": [
+                            "subworkflows"
+                        ]
+                    }
+                }
+            }
+        },
+        "https://github.com/nf-core/modules.git": {
+            "modules": {
+                "nf-core": {
+                    "fastqc": {
+                        "branch": "master",
+                        "git_sha": "285a50500f9e02578d90b3ce6382ea3c30216acd",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "samtools/fastq": {
+                        "branch": "master",
+                        "git_sha": "06c8865e36741e05ad32ef70ab3fac127486af48",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "samtools/merge": {
+                        "branch": "master",
+                        "git_sha": "04fbbc7c43cebc0b95d5b126f6d9fe4effa33519",
+                        "installed_by": [
+                            "modules",
+                            "ont/demultiplex"
+                        ]
+                    },
+                    "samtools/view": {
+                        "branch": "master",
+                        "git_sha": "0bd7d2333a88483aa0476acea172e9f5f6dd83bb",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    }
+                }
+            }
         }
-      },
-      "subworkflows": {
-        "francis-crick-institute": {
-          "ont/demultiplex": {
-            "branch": "main",
-            "git_sha": "05e26cf6ac616229a7e00ec2ef967845fcd2aa00",
-            "installed_by": ["subworkflows"]
-          }
-        }
-      }
-    },
-    "https://github.com/nf-core/modules.git": {
-      "modules": {
-        "nf-core": {
-          "fastqc": {
-            "branch": "master",
-            "git_sha": "285a50500f9e02578d90b3ce6382ea3c30216acd",
-            "installed_by": ["modules"]
-          },
-          "samtools/fastq": {
-            "branch": "master",
-            "git_sha": "06c8865e36741e05ad32ef70ab3fac127486af48",
-            "installed_by": ["modules"]
-          },
-          "samtools/merge": {
-            "branch": "master",
-            "git_sha": "04fbbc7c43cebc0b95d5b126f6d9fe4effa33519",
-            "installed_by": ["modules", "ont/demultiplex"]
-          },
-          "samtools/view": {
-            "branch": "master",
-            "git_sha": "0bd7d2333a88483aa0476acea172e9f5f6dd83bb",
-            "installed_by": ["modules"]
-          }
-        }
-      }
     }
-  }
 }
