@@ -4,15 +4,15 @@ process CHOPPER {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/chopper:0.9.0--d683a9a42d1eeafd':
+        'https://depot.galaxyproject.org/singularity/chopper:0.9.0--hdcf5f25_0':
         'community.wave.seqera.io/library/chopper:0.9.0--bea4432a5b736b84' }"
 
     input:
     tuple val(meta), path(fastq)
 
     output:
-    tuple val(meta), path("*.fastq.gz") , emit: fastq
-    path "versions.yml"                 , emit: versions
+    tuple val(meta), path("*.fastq.gz"), emit: fastq
+    path "versions.yml"                , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
