@@ -7,7 +7,7 @@
                 "francis-crick-institute": {
                     "dorado/basecaller": {
                         "branch": "main",
-                        "git_sha": "2e8f2ba268deeb2d47ea58f76c58d229f72b0544",
+                        "git_sha": "fd22aad893cec0a938eda12a27628846a6548dee",
                         "installed_by": [
                             "demultiplex",
                             "ont/demultiplex"
