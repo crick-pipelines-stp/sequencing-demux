@@ -32,6 +32,7 @@ include { workflow_complete_summary } from './modules/francis-crick-institute/ut
 */
 
 ch_multiqc_config = file("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
+ch_multiqc_logo   = file("$projectDir/assets/The_Francis_Crick_Institute_logo.png", checkIfExists: true)
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,14 +85,13 @@ def runid = file(params.run_dir).name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { SAMTOOLS_VIEW as FILTER_READ_Q      } from './modules/nf-core/samtools/view/main'
 include { UTIL_RENAMER as OUTPUT_RAW_BAM      } from './modules/local/util/renamer/main'
 include { TOULLIGQC as TOULLIGQC_ALL          } from './modules/local/toulligqc/main'
 include { SAMTOOLS_MERGE as MERGE_GROUPS      } from './modules/nf-core/samtools/merge/main'
 include { DORADO_SUMMARY                      } from './modules/francis-crick-institute/dorado/summary/main'
 include { TOULLIGQC as TOULLIGQC_GROUPED      } from './modules/local/toulligqc/main'
 include { SAMTOOLS_FASTQ as RAW_BAM_TO_FASTQ  } from './modules/nf-core/samtools/fastq/main'
-include { SAMTOOLS_FASTQ as FILT_BAM_TO_FASTQ } from './modules/nf-core/samtools/fastq/main'
+include { CHOPPER                             } from './modules/local/chopper/main'
 include { FASTQC                              } from './modules/nf-core/fastqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS         } from './modules/local/custom_dumpsoftwareversions'
 include { MULTIQC as MULTIQC_ALL              } from './modules/local/multiqc/main'
@@ -157,24 +157,13 @@ workflow {
         //
         // MODULE: Output the raw demux bams if required
         //
-        if(params.output_raw && params.output_bam)
+        if(params.output_bam)
         {
             OUTPUT_RAW_BAM (
                 ch_demux_bam,
                 false
             )
         }
-
-        //
-        // MODULE: Filter on read quality files
-        //
-        FILTER_READ_Q (
-            ch_demux_bam,
-            [[], []],
-            []
-        )
-        ch_versions     = ch_versions.mix(FILTER_READ_Q.out.versions)
-        ch_filtered_bam = FILTER_READ_Q.out.bam
 
         //
         // MODULE: Run toulligqc on all samples
@@ -205,7 +194,7 @@ workflow {
             [[], []],
             [[], []]
         )
-        ch_versions = ch_versions.mix(MERGE_GROUPS.out.versions)
+        ch_versions   = ch_versions.mix(MERGE_GROUPS.out.versions)
         ch_merged_bam = MERGE_GROUPS.out.bam
 
         //
@@ -260,18 +249,17 @@ workflow {
             ch_demux_bam,
             false
         )
-        ch_versions = ch_versions.mix(RAW_BAM_TO_FASTQ.out.versions)
+        ch_versions  = ch_versions.mix(RAW_BAM_TO_FASTQ.out.versions)
         ch_raw_fastq = RAW_BAM_TO_FASTQ.out.reads
 
         //
-        // MODULE: Convert filtered bams to fastq
+        // MODULE: Filter fastq
         //
-        FILT_BAM_TO_FASTQ (
-            ch_filtered_bam,
-            false
+        CHOPPER (
+            ch_raw_fastq,
         )
-        ch_versions = ch_versions.mix(FILT_BAM_TO_FASTQ.out.versions)
-        ch_filt_fastq = FILT_BAM_TO_FASTQ.out.reads
+        ch_versions       = ch_versions.mix(CHOPPER.out.versions)
+        ch_filtered_fastq = CHOPPER.out.fastq
 
         //
         // MODULE: Run fastqc on fastq files
@@ -327,7 +315,7 @@ workflow {
         ch_multiqc_files_all,
         ch_multiqc_config,
         [],
-        []
+        ch_multiqc_logo
     )
     multiqc_report_all = MULTIQC_ALL.out.report.toList()
 
@@ -335,7 +323,7 @@ workflow {
         ch_multiqc_files_grouped,
         ch_multiqc_config,
         [],
-        []
+        ch_multiqc_logo
     )
     multiqc_report_grouped = MULTIQC_GROUPED.out.report.toList()
 }
