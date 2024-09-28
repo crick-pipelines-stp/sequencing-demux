@@ -1,13 +1,19 @@
-report_section_order:
-  software_versions:
-    order: -1000
-  "pipelines-technology-nanopore_demux-summary":
-    order: -1001
+title: "Genomics STP"
+subtitle: "Nanopore Sequencing Demulitplexing Report"
+intro_text: ""
 
+# report_section_order:
+#   software_versions:
+#     order: -1000
+#   "pipelines-technology-nanopore_demux-summary":
+#     order: -1001
+
+show_analysis_paths: false
+show_analysis_time: false
 export_plots: true
 disable_version_detection: true
+sample_names_replace_exact: true
 
-# Run only these modules
 run_modules:
   - custom_content
   - fastqc
@@ -15,3 +21,10 @@ run_modules:
 module_order:
   - fastqc
   - custom_content
+
+remove_sections:
+  - fastqc_sequence_duplication_levels
+  - fastqc_overrepresented_sequences
+  - fastqc_top_overrepresented_sequences
+  - fastqc_adapter_content
+  - fastqc_status_checks
