@@ -270,10 +270,6 @@ workflow {
             .map{ it[1] }
             .flatten()
             .map{ [ [id:it.toString().split('/')[-1].split('\\.')[0]], it ]}
-            // .cross(ch_split_fastq.map{[it[0].id, it[0]]})
-            // .map { [it[2], it[1]] }
-
-        // ch_split_fastq_flat | view 
 
         //
         // MODULE: Filter fastq
