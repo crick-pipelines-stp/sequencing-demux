@@ -91,7 +91,9 @@ include { SAMTOOLS_MERGE as MERGE_GROUPS      } from './modules/nf-core/samtools
 include { DORADO_SUMMARY                      } from './modules/francis-crick-institute/dorado/summary/main'
 include { TOULLIGQC as TOULLIGQC_GROUPED      } from './modules/local/toulligqc/main'
 include { SAMTOOLS_FASTQ as RAW_BAM_TO_FASTQ  } from './modules/nf-core/samtools/fastq/main'
+include { SEQKIT_SPLIT2                       } from './modules/nf-core/seqkit/split2/main'
 include { CHOPPER                             } from './modules/local/chopper/main'
+include { CAT_FASTQ                           } from './modules/nf-core/cat/fastq/main'
 include { FASTQC                              } from './modules/nf-core/fastqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS         } from './modules/local/custom_dumpsoftwareversions'
 include { MULTIQC as MULTIQC_ALL              } from './modules/local/multiqc/main'
@@ -253,13 +255,52 @@ workflow {
         ch_raw_fastq = RAW_BAM_TO_FASTQ.out.reads
 
         //
+        // MODULE: Split fastq files for chopper performance boost
+        //
+        SEQKIT_SPLIT2 (
+            ch_raw_fastq
+        )
+        ch_versions    = ch_versions.mix(SEQKIT_SPLIT2.out.versions)
+        ch_split_fastq = SEQKIT_SPLIT2.out.reads
+
+        //
+        // CHANNEL: Flatten chunks for processing
+        //
+        ch_split_fastq_flat = ch_split_fastq
+            .map{ it[1] }
+            .flatten()
+            .map{ [ [id:it.toString().split('/')[-1].split('\\.')[0]], it ]}
+            // .cross(ch_split_fastq.map{[it[0].id, it[0]]})
+            // .map { [it[2], it[1]] }
+
+        // ch_split_fastq_flat | view 
+
+        //
         // MODULE: Filter fastq
         //
         CHOPPER (
-            ch_raw_fastq,
+            ch_split_fastq_flat,
         )
-        ch_versions       = ch_versions.mix(CHOPPER.out.versions)
-        ch_filtered_fastq = CHOPPER.out.fastq
+        ch_versions              = ch_versions.mix(CHOPPER.out.versions)
+        ch_filtered_fastq_chunks = CHOPPER.out.fastq
+
+        //
+        // CHANNEL: Merge chunks ready for merging
+        //
+        ch_filtered_fastq_merged = ch_filtered_fastq_chunks
+            .groupTuple(by: [0])
+            .map{[it[0].id, it[0], it[1]]}
+            .join(ch_split_fastq.map{[it[0].id, it[0]]})
+            .map{[it[3] + [single_end: true], it[2]]}
+
+        //
+        // MODULE: Merge fastqs back together
+        //
+        CAT_FASTQ (
+            ch_filtered_fastq_merged
+        )
+        ch_versions       = ch_versions.mix(CAT_FASTQ.out.versions)
+        ch_filtered_fastq = CAT_FASTQ.out.reads
 
         //
         // MODULE: Run fastqc on fastq files
