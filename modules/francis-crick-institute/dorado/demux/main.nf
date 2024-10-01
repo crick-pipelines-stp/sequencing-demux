@@ -47,7 +47,7 @@ process DORADO_DEMUX {
                     ext="bam"
                 fi
 
-                if [ "\$base_name" == "\$barcode" ]; then
+                if [[ "\$base_name" == *"\$barcode"* ]]; then
                     mv "\$f" "\$sample_id.\$ext"
                     break
                 fi
