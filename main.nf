@@ -38,7 +38,7 @@ include { DORADO_SUMMARY                     } from './modules/francis-crick-ins
 include { TOULLIGQC as TOULLIGQC_GROUPED     } from './modules/local/toulligqc/main'
 include { SAMTOOLS_FASTQ as RAW_BAM_TO_FASTQ } from './modules/nf-core/samtools/fastq/main'
 include { SEQKIT_SPLIT2                      } from './modules/nf-core/seqkit/split2/main'
-include { CHOPPER                            } from './modules/local/chopper/main'
+include { CHOPPER                            } from './modules/nf-core/chopper/main'
 include { CAT_FASTQ                          } from './modules/nf-core/cat/fastq/main'
 include { FASTQC                             } from './modules/nf-core/fastqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS        } from './modules/local/custom_dumpsoftwareversions'
