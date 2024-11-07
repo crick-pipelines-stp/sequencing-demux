@@ -41,7 +41,6 @@ process SEQKIT_SPLIT2 {
             $args \\
             --threads $task.cpus \\
             --read1 ${reads[0]} \\
-            --read2 ${reads[1]} \\
             --out-dir ${prefix}
 
         cat <<-END_VERSIONS > versions.yml
