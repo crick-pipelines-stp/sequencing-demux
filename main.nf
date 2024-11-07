@@ -232,7 +232,7 @@ workflow {
             false
         )
         ch_versions  = ch_versions.mix(RAW_BAM_TO_FASTQ.out.versions)
-        ch_raw_fastq = RAW_BAM_TO_FASTQ.out.reads
+        ch_raw_fastq = RAW_BAM_TO_FASTQ.out.other
 
         //
         // MODULE: Split fastq files for chopper performance boost
