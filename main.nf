@@ -27,77 +27,23 @@ include { workflow_complete_summary } from './modules/francis-crick-institute/ut
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    CONFIG FILES
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-ch_multiqc_config = file("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
-ch_multiqc_logo   = file("$projectDir/assets/The_Francis_Crick_Institute_logo.png", checkIfExists: true)
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    INIT
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-log.info summary_log(workflow, params, params.debug, params.monochrome_logs)
-def summary_params = params_summary_map(workflow, params, params.debug)
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    VALIDATE INPUTS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-// Check manditory input parameters to see if the files exist if they have been specified
-def check_param_list = [
-    run_dir: params.run_dir,
-    sample_sheet: params.samplesheet
-]
-for (param in check_param_list) {
-    if (!param.value) {
-        exit 1, "Required parameter not specified: ${param.key}"
-    }
-    else {
-        file(param.value, checkIfExists: true)
-    }
-}
-
-// Check non-manditory input parameters to see if the files exist if they have been specified
-check_param_list = [
-    params.bam,
-    params.dorado_resume_bam
-]
-for (param in check_param_list) { if (param) { file(param, checkIfExists: true) } }
-
-// Check mode of operation
-def operation_modes = ['ont', 'illumina']
-if(!(params.mode in operation_modes)) {
-    exit 1, "Incorrect mode of operation '${params.mode}'. Please choose from ${operation_modes}"
-}
-
-// Extract run_id
-def runid = file(params.run_dir).name
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { UTIL_RENAMER as OUTPUT_RAW_BAM      } from './modules/local/util/renamer/main'
-include { TOULLIGQC as TOULLIGQC_ALL          } from './modules/local/toulligqc/main'
-include { SAMTOOLS_MERGE as MERGE_GROUPS      } from './modules/nf-core/samtools/merge/main'
-include { DORADO_SUMMARY                      } from './modules/francis-crick-institute/dorado/summary/main'
-include { TOULLIGQC as TOULLIGQC_GROUPED      } from './modules/local/toulligqc/main'
-include { SAMTOOLS_FASTQ as RAW_BAM_TO_FASTQ  } from './modules/nf-core/samtools/fastq/main'
-include { SEQKIT_SPLIT2                       } from './modules/nf-core/seqkit/split2/main'
-include { CHOPPER                             } from './modules/local/chopper/main'
-include { CAT_FASTQ                           } from './modules/nf-core/cat/fastq/main'
-include { FASTQC                              } from './modules/nf-core/fastqc/main'
-include { CUSTOM_DUMPSOFTWAREVERSIONS         } from './modules/local/custom_dumpsoftwareversions'
-include { MULTIQC as MULTIQC_ALL              } from './modules/local/multiqc/main'
-include { MULTIQC as MULTIQC_GROUPED          } from './modules/local/multiqc/main'
+include { UTIL_RENAMER as OUTPUT_RAW_BAM     } from './modules/local/util/renamer/main'
+include { TOULLIGQC as TOULLIGQC_ALL         } from './modules/local/toulligqc/main'
+include { SAMTOOLS_MERGE as MERGE_GROUPS     } from './modules/nf-core/samtools/merge/main'
+include { DORADO_SUMMARY                     } from './modules/francis-crick-institute/dorado/summary/main'
+include { TOULLIGQC as TOULLIGQC_GROUPED     } from './modules/local/toulligqc/main'
+include { SAMTOOLS_FASTQ as RAW_BAM_TO_FASTQ } from './modules/nf-core/samtools/fastq/main'
+include { SEQKIT_SPLIT2                      } from './modules/nf-core/seqkit/split2/main'
+include { CHOPPER                            } from './modules/nf-core/chopper/main'
+include { CAT_FASTQ                          } from './modules/nf-core/cat/fastq/main'
+include { FASTQC                             } from './modules/nf-core/fastqc/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS        } from './modules/local/custom_dumpsoftwareversions'
+include { MULTIQC as MULTIQC_ALL             } from './modules/nf-core/multiqc/main'
+include { MULTIQC as MULTIQC_GROUPED         } from './modules/nf-core/multiqc/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,12 +59,46 @@ include { ONT_DEMULTIPLEX } from './subworkflows/francis-crick-institute/ont/dem
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Workflow summary
+log.info summary_log(workflow, params, params.debug, params.monochrome_logs)
+def summary_params = params_summary_map(workflow, params, params.debug)
+
 workflow {
     //
     // INIT:
     // 
-    ch_versions   = Channel.empty()
-    ch_fastqc_zip = Channel.empty()
+    ch_versions       = Channel.empty()
+    ch_fastqc_zip     = Channel.empty()
+    ch_multiqc_config = Channel.of(file("$projectDir/assets/multiqc_config.yml", checkIfExists: true))
+    ch_multiqc_logo   = Channel.of(file("$projectDir/assets/The_Francis_Crick_Institute_logo.png", checkIfExists: true))
+
+    // Check manditory input parameters to see if the files exist if they have been specified
+    def check_param_list = [
+        run_dir: params.run_dir,
+        sample_sheet: params.samplesheet
+    ]
+    check_param_list.each {
+        if (!it.value) { exit 1, "Required parameter not specified: ${it.key}" }
+        else { file(it.value, checkIfExists: true) }
+    }
+
+    // Check non-manditory input parameters to see if the files exist if they have been specified
+    check_param_list = [
+        params.bam,
+        params.dorado_resume_bam
+    ]
+    check_param_list.each {
+        if (it) { file(it, checkIfExists: true) }
+    }
+
+    // Check mode of operation
+    def operation_modes = ['ont', 'illumina']
+    if(!(params.mode in operation_modes)) {
+        exit 1, "Incorrect mode of operation '${params.mode}'. Please choose from ${operation_modes}"
+    }
+
+    // Extract run_id
+    def runid = file(params.run_dir).name
 
     if(params.mode == "ont")
     {
@@ -252,7 +232,7 @@ workflow {
             false
         )
         ch_versions  = ch_versions.mix(RAW_BAM_TO_FASTQ.out.versions)
-        ch_raw_fastq = RAW_BAM_TO_FASTQ.out.reads
+        ch_raw_fastq = RAW_BAM_TO_FASTQ.out.other
 
         //
         // MODULE: Split fastq files for chopper performance boost
@@ -340,29 +320,33 @@ workflow {
     ch_multiqc_files_all = Channel.empty()
     ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_multiqc_files)
     ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files_all = ch_multiqc_files_all.collect().map{ [[id:"all"], it] }
+    ch_multiqc_files_all = ch_multiqc_files_all
 
     ch_multiqc_files_grouped = ch_grouped_fastqc
         .map { [ it[0].id, it[0], it ] }
         .map { [ it[1], [ it[2][1].flatten() ].flatten() ] }
         .combine(ch_multiqc_files.collect())
-        .map { [ it[0], [it[1], it[2]].flatten() ] }
+        .map { [it[1], it[2]].flatten() }
 
     MULTIQC_ALL (
-        ch_multiqc_files_all,
+        ch_multiqc_files_all.collect(),
         ch_multiqc_config,
         [],
-        ch_multiqc_logo
+        ch_multiqc_logo,
+        [],
+        []
     )
-    multiqc_report_all = MULTIQC_ALL.out.report.toList()
+    // multiqc_report_all = MULTIQC_ALL.out.report.toList()
 
     MULTIQC_GROUPED (
         ch_multiqc_files_grouped,
         ch_multiqc_config,
         [],
-        ch_multiqc_logo
+        ch_multiqc_logo,
+        [],
+        []
     )
-    multiqc_report_grouped = MULTIQC_GROUPED.out.report.toList()
+    // multiqc_report_grouped = MULTIQC_GROUPED.out.report.toList()
 }
 
 /*
@@ -377,9 +361,9 @@ workflow.onComplete {
         workflow_complete_summary(workflow, "${params.outdir}/pipeline_info/workflow_complete.txt")
     }
 
-    if (params.hook_url) {
-        im_notification(workflow, params, projectDir, runid, summary_params, log)
-    }
+    // if (params.hook_url) {
+    //     im_notification(workflow, params, projectDir, runid, summary_params, log)
+    // }
 
     // if (params.email || params.email_on_fail) {
     //     NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report, pass_mapped_reads, pass_trimmed_reads, pass_strand_check)

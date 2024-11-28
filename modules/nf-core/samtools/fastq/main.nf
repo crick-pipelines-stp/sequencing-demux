@@ -4,8 +4,8 @@ process SAMTOOLS_FASTQ {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/samtools:1.20--h50ea8bc_0' :
-        'biocontainers/samtools:1.20--h50ea8bc_0' }"
+        'https://depot.galaxyproject.org/singularity/samtools:1.21--h50ea8bc_0' :
+        'biocontainers/samtools:1.21--h50ea8bc_0' }"
 
     input:
     tuple val(meta), path(input)
@@ -14,8 +14,8 @@ process SAMTOOLS_FASTQ {
     output:
     // tuple val(meta), path("*_{1,2}.fastq.gz")      , optional:true, emit: fastq
     // tuple val(meta), path("*_interleaved.fastq")   , optional:true, emit: interleaved
-    //tuple val(meta), path("*_singleton.fastq.gz")  , optional:true, emit: singleton
-    tuple val(meta), path("*ont.fastq.gz")      , optional:true, emit: reads
+    // tuple val(meta), path("*_singleton.fastq.gz")  , optional:true, emit: singleton
+    tuple val(meta), path("*ont.fastq.gz")      , optional:true, emit: other
     path  "versions.yml"                           , emit: versions
 
     when:

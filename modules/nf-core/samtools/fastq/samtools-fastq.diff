@@ -1,0 +1,35 @@
+Changes in module 'nf-core/samtools/fastq'
+'modules/nf-core/samtools/fastq/environment.yml' is unchanged
+'modules/nf-core/samtools/fastq/meta.yml' is unchanged
+Changes in 'samtools/fastq/main.nf':
+--- modules/nf-core/samtools/fastq/main.nf
++++ modules/nf-core/samtools/fastq/main.nf
+@@ -12,10 +12,10 @@
+     val(interleave)
+ 
+     output:
+-    tuple val(meta), path("*_{1,2}.fastq.gz")      , optional:true, emit: fastq
+-    tuple val(meta), path("*_interleaved.fastq")   , optional:true, emit: interleaved
+-    tuple val(meta), path("*_singleton.fastq.gz")  , optional:true, emit: singleton
+-    tuple val(meta), path("*_other.fastq.gz")      , optional:true, emit: other
++    // tuple val(meta), path("*_{1,2}.fastq.gz")      , optional:true, emit: fastq
++    // tuple val(meta), path("*_interleaved.fastq")   , optional:true, emit: interleaved
++    // tuple val(meta), path("*_singleton.fastq.gz")  , optional:true, emit: singleton
++    tuple val(meta), path("*ont.fastq.gz")      , optional:true, emit: other
+     path  "versions.yml"                           , emit: versions
+ 
+     when:
+@@ -32,7 +32,7 @@
+         fastq \\
+         $args \\
+         --threads ${task.cpus-1} \\
+-        -0 ${prefix}_other.fastq.gz \\
++        -0 ${prefix}.ont.fastq.gz \\
+         $input \\
+         $output
+ 
+
+'modules/nf-core/samtools/fastq/tests/main.nf.test.snap' is unchanged
+'modules/nf-core/samtools/fastq/tests/tags.yml' is unchanged
+'modules/nf-core/samtools/fastq/tests/main.nf.test' is unchanged
+************************************************************
