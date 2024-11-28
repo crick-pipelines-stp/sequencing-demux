@@ -17,8 +17,10 @@ sample_names_replace_exact: true
 run_modules:
   - custom_content
   - fastqc
+  - bclconvert
 
 module_order:
+  - bclconvert
   - fastqc
   - custom_content
 

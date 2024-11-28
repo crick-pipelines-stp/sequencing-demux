@@ -2,9 +2,9 @@
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    pipelines-technology/nanopore_demux
+    pipelines-technology/sequencing_demux
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Github : https://github.com/crick-pipelines-stp/nanopore-demux
+    Github : https://github.com/crick-pipelines-stp/sequencing-demux
 ----------------------------------------------------------------------------------------
 */
 
@@ -51,7 +51,8 @@ include { MULTIQC as MULTIQC_GROUPED         } from './modules/nf-core/multiqc/m
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { ONT_DEMULTIPLEX } from './subworkflows/francis-crick-institute/ont/demultiplex/main'
+include { ONT_DEMULTIPLEX      } from './subworkflows/francis-crick-institute/ont/demultiplex/main'
+include { ILLUMINA_DEMULTIPLEX } from './subworkflows/local/illumina_demux'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,6 +101,7 @@ workflow {
     // Extract run_id
     def runid = file(params.run_dir).name
 
+    ch_grouped_fastqc = Channel.empty()
     if(params.mode == "ont")
     {
         //
@@ -297,6 +299,15 @@ workflow {
                 def files = it[4].flatten().findAll { item -> !(item instanceof Map) }
                 [ [ id:it[1]+"_"+it[2]+"_"+it[3], run_id:it[0], group: it[1], user:it[2], project_id:it[3]], files ]
             }
+    } else if (params.mode == "illumina") {
+        //
+        // SUBWORKFLOW: Demultiplex illumina data
+        //
+        ILLUMINA_DEMULTIPLEX (
+            params.samplesheet
+        )
+        ch_versions            = ch_versions.mix(ILLUMINA_DEMULTIPLEX.out.versions)
+        ch_demux_multiqc_files = ILLUMINA_DEMULTIPLEX.out.multiqc_files
     }
 
     //
@@ -320,7 +331,7 @@ workflow {
     ch_multiqc_files_all = Channel.empty()
     ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_multiqc_files)
     ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files_all = ch_multiqc_files_all
+    ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_demux_multiqc_files)
 
     ch_multiqc_files_grouped = ch_grouped_fastqc
         .map { [ it[0].id, it[0], it ] }
@@ -360,14 +371,6 @@ workflow.onComplete {
     if(workflow.success) {
         workflow_complete_summary(workflow, "${params.outdir}/pipeline_info/workflow_complete.txt")
     }
-
-    // if (params.hook_url) {
-    //     im_notification(workflow, params, projectDir, runid, summary_params, log)
-    // }
-
-    // if (params.email || params.email_on_fail) {
-    //     NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report, pass_mapped_reads, pass_trimmed_reads, pass_strand_check)
-    // }
 }
 
 /*

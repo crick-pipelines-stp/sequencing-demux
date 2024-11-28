@@ -1,112 +1,91 @@
 {
-    "name": "",
-    "homePage": "",
-    "repos": {
-        "https://github.com/FrancisCrickInstitute/nextflow-modules": {
-            "modules": {
-                "francis-crick-institute": {
-                    "dorado/basecaller": {
-                        "branch": "main",
-                        "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "dorado/demux": {
-                        "branch": "main",
-                        "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "dorado/summary": {
-                        "branch": "main",
-                        "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samplesheet/check": {
-                        "branch": "main",
-                        "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "util/io": {
-                        "branch": "main",
-                        "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "util/logging": {
-                        "branch": "main",
-                        "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    }
-                }
-            }
-        },
-        "https://github.com/nf-core/modules.git": {
-            "modules": {
-                "nf-core": {
-                    "cat/fastq": {
-                        "branch": "master",
-                        "git_sha": "a1abf90966a2a4016d3c3e41e228bfcbd4811ccc",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "chopper": {
-                        "branch": "master",
-                        "git_sha": "22737835af2db3dd0d5b6b332e75e160d0199fae",
-                        "installed_by": [
-                            "modules"
-                        ],
-                        "patch": "modules/nf-core/chopper/chopper.diff"
-                    },
-                    "fastqc": {
-                        "branch": "master",
-                        "git_sha": "666652151335353eef2fcd58880bcef5bc2928e1",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "multiqc": {
-                        "branch": "master",
-                        "git_sha": "cf17ca47590cc578dfb47db1c2a44ef86f89976d",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samtools/fastq": {
-                        "branch": "master",
-                        "git_sha": "b13f07be4c508d6ff6312d354d09f2493243e208",
-                        "installed_by": [
-                            "modules"
-                        ],
-                        "patch": "modules/nf-core/samtools/fastq/samtools-fastq.diff"
-                    },
-                    "samtools/merge": {
-                        "branch": "master",
-                        "git_sha": "b13f07be4c508d6ff6312d354d09f2493243e208",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "seqkit/split2": {
-                        "branch": "master",
-                        "git_sha": "666652151335353eef2fcd58880bcef5bc2928e1",
-                        "installed_by": [
-                            "modules"
-                        ],
-                        "patch": "modules/nf-core/seqkit/split2/seqkit-split2.diff"
-                    }
-                }
-            }
+  "name": "",
+  "homePage": "",
+  "repos": {
+    "https://github.com/FrancisCrickInstitute/nextflow-modules": {
+      "modules": {
+        "francis-crick-institute": {
+          "dorado/basecaller": {
+            "branch": "main",
+            "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
+            "installed_by": ["modules"]
+          },
+          "dorado/demux": {
+            "branch": "main",
+            "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
+            "installed_by": ["modules"]
+          },
+          "dorado/summary": {
+            "branch": "main",
+            "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
+            "installed_by": ["modules"]
+          },
+          "samplesheet/check": {
+            "branch": "main",
+            "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
+            "installed_by": ["modules"]
+          },
+          "util/io": {
+            "branch": "main",
+            "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
+            "installed_by": ["modules"]
+          },
+          "util/logging": {
+            "branch": "main",
+            "git_sha": "c3b73a1cf493cbf8bde15999262a8b9af0ba4271",
+            "installed_by": ["modules"]
+          }
         }
+      }
+    },
+    "https://github.com/nf-core/modules.git": {
+      "modules": {
+        "nf-core": {
+          "bclconvert": {
+            "branch": "master",
+            "git_sha": "ffd452a46cec2f8ab62c68a5afeb99534947e072",
+            "installed_by": ["modules"]
+          },
+          "cat/fastq": {
+            "branch": "master",
+            "git_sha": "a1abf90966a2a4016d3c3e41e228bfcbd4811ccc",
+            "installed_by": ["modules"]
+          },
+          "chopper": {
+            "branch": "master",
+            "git_sha": "22737835af2db3dd0d5b6b332e75e160d0199fae",
+            "installed_by": ["modules"],
+            "patch": "modules/nf-core/chopper/chopper.diff"
+          },
+          "fastqc": {
+            "branch": "master",
+            "git_sha": "666652151335353eef2fcd58880bcef5bc2928e1",
+            "installed_by": ["modules"]
+          },
+          "multiqc": {
+            "branch": "master",
+            "git_sha": "cf17ca47590cc578dfb47db1c2a44ef86f89976d",
+            "installed_by": ["modules"]
+          },
+          "samtools/fastq": {
+            "branch": "master",
+            "git_sha": "b13f07be4c508d6ff6312d354d09f2493243e208",
+            "installed_by": ["modules"],
+            "patch": "modules/nf-core/samtools/fastq/samtools-fastq.diff"
+          },
+          "samtools/merge": {
+            "branch": "master",
+            "git_sha": "b13f07be4c508d6ff6312d354d09f2493243e208",
+            "installed_by": ["modules"]
+          },
+          "seqkit/split2": {
+            "branch": "master",
+            "git_sha": "666652151335353eef2fcd58880bcef5bc2928e1",
+            "installed_by": ["modules"],
+            "patch": "modules/nf-core/seqkit/split2/seqkit-split2.diff"
+          }
+        }
+      }
     }
+  }
 }
