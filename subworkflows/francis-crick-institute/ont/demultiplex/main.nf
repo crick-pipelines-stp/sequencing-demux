@@ -132,11 +132,12 @@ workflow ONT_DEMULTIPLEX {
     //
     ch_pod5_files = Channel.empty()
     if(val_run_dir != null) {
-        ch_pod5_files         = Channel.fromPath("${val_run_dir}/pod5/*.pod5")
-        ch_pod5_files_pass    = Channel.fromPath("${val_run_dir}/pod5_pass/*.pod5")
-        ch_pod5_files_fail    = Channel.fromPath("${val_run_dir}/pod5_fail/*.pod5")
-        ch_pod5_files_skipped = Channel.fromPath("${val_run_dir}/pod5_skipped/*.pod5")
-        ch_pod5_files         = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped).mix(ch_pod5_files)
+        ch_pod5_files           = Channel.fromPath("${val_run_dir}/pod5/*.pod5")
+        ch_pod5_files_pass      = Channel.fromPath("${val_run_dir}/pod5_pass/*.pod5")
+        ch_pod5_files_fail      = Channel.fromPath("${val_run_dir}/pod5_fail/*.pod5")
+        ch_pod5_files_skipped   = Channel.fromPath("${val_run_dir}/pod5_skipped/*.pod5")
+        ch_pod5_files_skipped_2 = Channel.fromPath("${val_run_dir}/pod5_skip/*.pod5")
+        ch_pod5_files           = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped).mix(ch_pod5_files_skipped_2).mix(ch_pod5_files)
 
         //
         // CHANNEL: Collate pod5 files into batches
