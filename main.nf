@@ -42,8 +42,8 @@ include { CHOPPER                            } from './modules/nf-core/chopper/m
 include { CAT_FASTQ                          } from './modules/nf-core/cat/fastq/main'
 include { FASTQC                             } from './modules/nf-core/fastqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS        } from './modules/local/custom_dumpsoftwareversions'
-include { MULTIQC as MULTIQC_ALL             } from './modules/nf-core/multiqc/main'
-include { MULTIQC as MULTIQC_GROUPED         } from './modules/nf-core/multiqc/main'
+include { MULTIQC as MULTIQC_ALL             } from './modules/local/multiqc/main'
+include { MULTIQC as MULTIQC_GROUPED         } from './modules/local/multiqc/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -320,33 +320,29 @@ workflow {
     ch_multiqc_files_all = Channel.empty()
     ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_multiqc_files)
     ch_multiqc_files_all = ch_multiqc_files_all.mix(ch_fastqc_zip.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files_all = ch_multiqc_files_all
+    ch_multiqc_files_all = ch_multiqc_files_all.collect().map{ [[id:"all"], it] }
 
     ch_multiqc_files_grouped = ch_grouped_fastqc
         .map { [ it[0].id, it[0], it ] }
         .map { [ it[1], [ it[2][1].flatten() ].flatten() ] }
         .combine(ch_multiqc_files.collect())
-        .map { [it[1], it[2]].flatten() }
+        .map { [ it[0], [it[1], it[2]].flatten() ] }
 
     MULTIQC_ALL (
-        ch_multiqc_files_all.collect(),
+        ch_multiqc_files_all,
         ch_multiqc_config,
         [],
-        ch_multiqc_logo,
-        [],
-        []
+        ch_multiqc_logo
     )
-    // multiqc_report_all = MULTIQC_ALL.out.report.toList()
+   // multiqc_report_all = MULTIQC_ALL.out.report.toList()
 
     MULTIQC_GROUPED (
         ch_multiqc_files_grouped,
         ch_multiqc_config,
         [],
-        ch_multiqc_logo,
-        [],
-        []
+        ch_multiqc_logo
     )
-    // multiqc_report_grouped = MULTIQC_GROUPED.out.report.toList()
+    //multiqc_report_grouped = MULTIQC_GROUPED.out.report.toList()
 }
 
 /*
