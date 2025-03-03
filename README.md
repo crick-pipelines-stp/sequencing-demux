@@ -44,6 +44,7 @@ nextflow run crick-pipelines-stp/nanopore-demux \
 The samplesheet is a CSV file that contains information about the samples to be processed. Each row represents a sample and must include the following columns.
 
 | Column            | Description                                      |
+| ----------------- | ------------------------------------------------ |
 | `id`              | Unique identifier for the sample                 |
 | `sample_name`     | Name of the sample                               |
 | `group`           | Group or batch the sample belongs to             |
