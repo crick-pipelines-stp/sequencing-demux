@@ -95,7 +95,7 @@ workflow ONT_DEMULTIPLEX {
     }
 
     // Try to resolve bc_kit
-    if(val_run_dir != null && val_bc_kit == null) {
+    if(!params.dorado_ignore_summary_bc && val_run_dir != null && val_bc_kit == null) {
         bc_kit = find_bc_kit(val_run_dir, valid_bc_kits)
         if(bc_kit) { 
             log.info("Barcode Kit found from summary file: ${bc_kit}")
