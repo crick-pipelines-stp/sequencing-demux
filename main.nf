@@ -220,7 +220,7 @@ workflow {
             .groupTuple(by: [0, 1, 2, 3])
             .map {
                 def meta = it[4]
-                def path = "${params.outdir}/grouped/${it[1]}/${it[2]}/asf/${it[3]}/${it[0]}/samplesheet.csv"
+                def path = "${params.outdir}/grouped/${it[1]}/${it[2]}/genomics-stp/${it[3]}/${it[0]}/samplesheet.csv"
                 dump_meta(meta, path)
             }
 
