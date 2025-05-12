@@ -145,6 +145,8 @@ workflow ONT_DEMULTIPLEX {
         ch_pod5_files = ch_pod5_files
             .collate(val_batch_num)
             .map{ [[ id: it[0].simpleName.substring(0, 26) ], it ] }
+
+        ch_pod5_files | view
     }
 
     //
