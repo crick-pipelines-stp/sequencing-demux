@@ -206,6 +206,7 @@ workflow ONT_DEMULTIPLEX {
     //
     // CHANNEL: Add sample meta to main data channel
     //
+    ch_sample_meta | view
     ch_demux_input = ch_sample_meta
         .collect()
         .map{[it]}

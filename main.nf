@@ -66,7 +66,7 @@ def summary_params = params_summary_map(workflow, params, params.debug)
 workflow {
     //
     // INIT:
-    // 
+    //
     ch_versions       = Channel.empty()
     ch_fastqc_zip     = Channel.empty()
     ch_multiqc_config = Channel.of(file("$projectDir/assets/multiqc_config.yml", checkIfExists: true))
