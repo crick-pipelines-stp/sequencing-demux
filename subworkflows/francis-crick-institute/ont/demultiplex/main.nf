@@ -140,11 +140,21 @@ workflow ONT_DEMULTIPLEX {
         ch_pod5_files           = ch_pod5_files_pass.mix(ch_pod5_files_fail).mix(ch_pod5_files_skipped).mix(ch_pod5_files_skipped_2).mix(ch_pod5_files)
 
         //
+        // CHANNEL: Check we have some pod5 files
+        //
+        ch_pod5_files.count().map{
+            if(it == 0) {
+                exit 1, "No pod5 files detected"
+            }
+        }
+
+        //
         // CHANNEL: Collate pod5 files into batches
         //
         ch_pod5_files = ch_pod5_files
             .collate(val_batch_num)
             .map{ [[ id: it[0].simpleName.substring(0, 26) ], it ] }
+
     }
 
     //
