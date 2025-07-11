@@ -72,6 +72,16 @@ workflow {
     ch_multiqc_config = Channel.of(file("$projectDir/assets/multiqc_config.yml", checkIfExists: true))
     ch_multiqc_logo   = Channel.of(file("$projectDir/assets/The_Francis_Crick_Institute_logo.png", checkIfExists: true))
 
+    // Resolve model paths
+    ch_model_path = []
+    if(params.dorado_model_path) {
+        ch_model_path = Channel.fromPath(params.dorado_model_path)
+    }
+    ch_mod_model_path = []
+    if(params.dorado_mod_model_path) {
+        ch_mod_model_path = Channel.fromPath(params.dorado_mod_model_path)
+    }
+
     // Check manditory input parameters to see if the files exist if they have been specified
     def check_param_list = [
         run_dir: params.run_dir,
@@ -107,6 +117,8 @@ workflow {
         //
         ONT_DEMULTIPLEX(
             params.dorado_model,
+            ch_model_path,
+            ch_mod_model_path,
             params.dorado_bc_kit,
             true,
             params.dorado_bc_parse_pos,

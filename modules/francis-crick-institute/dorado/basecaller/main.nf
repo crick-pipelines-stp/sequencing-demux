@@ -8,6 +8,8 @@ process DORADO_BASECALLER {
     tuple val(meta), path("pod5s/*")
     path(bam)
     val(model)
+    path(model_path)
+    path(mod_model_path)
     val(bc_kit)
 
     output:
@@ -22,6 +24,8 @@ process DORADO_BASECALLER {
     def prefix     = task.ext.prefix ?: "${meta.id}"
     def bc_kit_arg = bc_kit ? "--kit-name ${bc_kit}"  : ''
     def resume_bam = bam ? "--resume-from resume_pod5.bam" : ''
+    def resolved_norm_model = model_path ? model_path : model
+    def resolved_mod_model = mod_model_path ? "--modified-bases-models ${mod_model_path}" : ""
 
     """
     export LC_ALL=C
@@ -32,10 +36,11 @@ process DORADO_BASECALLER {
     fi
 
     dorado basecaller \\
-        $model \\
+        $resolved_norm_model \\
         pod5s/ \\
         $bc_kit_arg \\
         $resume_bam \\
+        $resolved_mod_model \\
         $args \\
         > ${prefix}_\${RANDOM_ID}.bam
 

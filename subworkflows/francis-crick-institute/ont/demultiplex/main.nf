@@ -69,6 +69,8 @@ workflow ONT_DEMULTIPLEX {
 
     take:
     val_model         // Specify a short code like HAC or SUP
+    ch_model_path     // Path to model
+    ch_mod_model_path // Path to mod model
     val_bc_kit        // The barcode kit to demultiplex against
     val_check_barcode // Specifies if the run directory should be searched for a valid barcode kit
     val_bc_parse_pos  // The parse position to substring the barcode from in the meta data
@@ -184,6 +186,8 @@ workflow ONT_DEMULTIPLEX {
             ch_pod5_files,
             val_resume_bam ? ch_resume_bam.map{it[1]} : [],
             val_model,
+            ch_model_path.collect(),
+            ch_mod_model_path.collect(),
             bc_kit ?: []
         )
         ch_versions = ch_versions.mix(DORADO_BASECALLER.out.versions)
